@@ -1,0 +1,1174 @@
+   1               		.file	"suspend.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.suspend_idle,"ax",@progbits
+  11               	.global	suspend_idle
+  13               	suspend_idle:
+  14               	.LFB108:
+  15               		.file 1 "tmk_core/common/avr/suspend.c"
+   1:tmk_core/common/avr/suspend.c **** #include <stdbool.h>
+   2:tmk_core/common/avr/suspend.c **** #include <avr/sleep.h>
+   3:tmk_core/common/avr/suspend.c **** #include <avr/wdt.h>
+   4:tmk_core/common/avr/suspend.c **** #include <avr/interrupt.h>
+   5:tmk_core/common/avr/suspend.c **** #include "matrix.h"
+   6:tmk_core/common/avr/suspend.c **** #include "action.h"
+   7:tmk_core/common/avr/suspend.c **** #include "backlight.h"
+   8:tmk_core/common/avr/suspend.c **** #include "suspend_avr.h"
+   9:tmk_core/common/avr/suspend.c **** #include "suspend.h"
+  10:tmk_core/common/avr/suspend.c **** #include "timer.h"
+  11:tmk_core/common/avr/suspend.c **** #include "led.h"
+  12:tmk_core/common/avr/suspend.c **** #include "host.h"
+  13:tmk_core/common/avr/suspend.c **** #include "rgblight_reconfig.h"
+  14:tmk_core/common/avr/suspend.c **** 
+  15:tmk_core/common/avr/suspend.c **** #ifdef PROTOCOL_LUFA
+  16:tmk_core/common/avr/suspend.c **** 	#include "lufa.h"
+  17:tmk_core/common/avr/suspend.c **** #endif
+  18:tmk_core/common/avr/suspend.c **** 
+  19:tmk_core/common/avr/suspend.c **** #ifdef AUDIO_ENABLE
+  20:tmk_core/common/avr/suspend.c ****     #include "audio.h"
+  21:tmk_core/common/avr/suspend.c **** #endif /* AUDIO_ENABLE */
+  22:tmk_core/common/avr/suspend.c **** 
+  23:tmk_core/common/avr/suspend.c **** #if defined(RGBLIGHT_SLEEP) && defined(RGBLIGHT_ENABLE)
+  24:tmk_core/common/avr/suspend.c ****   #include "rgblight.h"
+  25:tmk_core/common/avr/suspend.c ****   extern rgblight_config_t rgblight_config;
+  26:tmk_core/common/avr/suspend.c ****   static bool rgblight_enabled;
+  27:tmk_core/common/avr/suspend.c ****   static bool is_suspended;
+  28:tmk_core/common/avr/suspend.c **** #endif
+  29:tmk_core/common/avr/suspend.c **** 
+  30:tmk_core/common/avr/suspend.c **** 
+  31:tmk_core/common/avr/suspend.c **** #define wdt_intr_enable(value)   \
+  32:tmk_core/common/avr/suspend.c **** __asm__ __volatile__ (  \
+  33:tmk_core/common/avr/suspend.c ****     "in __tmp_reg__,__SREG__" "\n\t"    \
+  34:tmk_core/common/avr/suspend.c ****     "cli" "\n\t"    \
+  35:tmk_core/common/avr/suspend.c ****     "wdr" "\n\t"    \
+  36:tmk_core/common/avr/suspend.c ****     "sts %0,%1" "\n\t"  \
+  37:tmk_core/common/avr/suspend.c ****     "out __SREG__,__tmp_reg__" "\n\t"   \
+  38:tmk_core/common/avr/suspend.c ****     "sts %0,%2" "\n\t" \
+  39:tmk_core/common/avr/suspend.c ****     : /* no outputs */  \
+  40:tmk_core/common/avr/suspend.c ****     : "M" (_SFR_MEM_ADDR(_WD_CONTROL_REG)), \
+  41:tmk_core/common/avr/suspend.c ****     "r" (_BV(_WD_CHANGE_BIT) | _BV(WDE)), \
+  42:tmk_core/common/avr/suspend.c ****     "r" ((uint8_t) ((value & 0x08 ? _WD_PS3_MASK : 0x00) | \
+  43:tmk_core/common/avr/suspend.c ****         _BV(WDIE) | (value & 0x07)) ) \
+  44:tmk_core/common/avr/suspend.c ****     : "r0"  \
+  45:tmk_core/common/avr/suspend.c **** )
+  46:tmk_core/common/avr/suspend.c **** 
+  47:tmk_core/common/avr/suspend.c **** 
+  48:tmk_core/common/avr/suspend.c **** /** \brief Suspend idle
+  49:tmk_core/common/avr/suspend.c ****  *
+  50:tmk_core/common/avr/suspend.c ****  * FIXME: needs doc
+  51:tmk_core/common/avr/suspend.c ****  */
+  52:tmk_core/common/avr/suspend.c **** void suspend_idle(uint8_t time) {
+  16               		.loc 1 52 0
+  17               		.cfi_startproc
+  18               	.LVL0:
+  19               	/* prologue: function */
+  20               	/* frame size = 0 */
+  21               	/* stack size = 0 */
+  22               	.L__stack_usage = 0
+  53:tmk_core/common/avr/suspend.c ****     cli();
+  23               		.loc 1 53 0
+  24               	/* #APP */
+  25               	 ;  53 "tmk_core/common/avr/suspend.c" 1
+  26 0000 F894      		cli
+  27               	 ;  0 "" 2
+  54:tmk_core/common/avr/suspend.c ****     set_sleep_mode(SLEEP_MODE_IDLE);
+  28               		.loc 1 54 0
+  29               	/* #NOAPP */
+  30 0002 83B7      		in r24,0x33
+  31               	.LVL1:
+  32 0004 817F      		andi r24,lo8(-15)
+  33 0006 83BF      		out 0x33,r24
+  55:tmk_core/common/avr/suspend.c ****     sleep_enable();
+  34               		.loc 1 55 0
+  35 0008 83B7      		in r24,0x33
+  36 000a 8160      		ori r24,lo8(1)
+  37 000c 83BF      		out 0x33,r24
+  56:tmk_core/common/avr/suspend.c ****     sei();
+  38               		.loc 1 56 0
+  39               	/* #APP */
+  40               	 ;  56 "tmk_core/common/avr/suspend.c" 1
+  41 000e 7894      		sei
+  42               	 ;  0 "" 2
+  57:tmk_core/common/avr/suspend.c ****     sleep_cpu();
+  43               		.loc 1 57 0
+  44               	 ;  57 "tmk_core/common/avr/suspend.c" 1
+  45 0010 8895      		sleep
+  46               		
+  47               	 ;  0 "" 2
+  58:tmk_core/common/avr/suspend.c ****     sleep_disable();
+  48               		.loc 1 58 0
+  49               	/* #NOAPP */
+  50 0012 83B7      		in r24,0x33
+  51 0014 8E7F      		andi r24,lo8(-2)
+  52 0016 83BF      		out 0x33,r24
+  53 0018 0895      		ret
+  54               		.cfi_endproc
+  55               	.LFE108:
+  57               		.section	.text.suspend_wakeup_init_user,"ax",@progbits
+  58               		.weak	suspend_wakeup_init_user
+  60               	suspend_wakeup_init_user:
+  61               	.LFB116:
+  59:tmk_core/common/avr/suspend.c **** }
+  60:tmk_core/common/avr/suspend.c **** 
+  61:tmk_core/common/avr/suspend.c **** 
+  62:tmk_core/common/avr/suspend.c **** // TODO: This needs some cleanup
+  63:tmk_core/common/avr/suspend.c **** 
+  64:tmk_core/common/avr/suspend.c **** /** \brief Run keyboard level Power down
+  65:tmk_core/common/avr/suspend.c ****  *
+  66:tmk_core/common/avr/suspend.c ****  * FIXME: needs doc
+  67:tmk_core/common/avr/suspend.c ****  */
+  68:tmk_core/common/avr/suspend.c **** __attribute__ ((weak))
+  69:tmk_core/common/avr/suspend.c **** void suspend_power_down_user (void) { }
+  70:tmk_core/common/avr/suspend.c **** /** \brief Run keyboard level Power down
+  71:tmk_core/common/avr/suspend.c ****  *
+  72:tmk_core/common/avr/suspend.c ****  * FIXME: needs doc
+  73:tmk_core/common/avr/suspend.c ****  */
+  74:tmk_core/common/avr/suspend.c **** __attribute__ ((weak))
+  75:tmk_core/common/avr/suspend.c **** void suspend_power_down_kb(void) {
+  76:tmk_core/common/avr/suspend.c ****   suspend_power_down_user();
+  77:tmk_core/common/avr/suspend.c **** }
+  78:tmk_core/common/avr/suspend.c **** 
+  79:tmk_core/common/avr/suspend.c **** #ifndef NO_SUSPEND_POWER_DOWN
+  80:tmk_core/common/avr/suspend.c **** /** \brief Power down MCU with watchdog timer
+  81:tmk_core/common/avr/suspend.c ****  *
+  82:tmk_core/common/avr/suspend.c ****  * wdto: watchdog timer timeout defined in <avr/wdt.h>
+  83:tmk_core/common/avr/suspend.c ****  *          WDTO_15MS
+  84:tmk_core/common/avr/suspend.c ****  *          WDTO_30MS
+  85:tmk_core/common/avr/suspend.c ****  *          WDTO_60MS
+  86:tmk_core/common/avr/suspend.c ****  *          WDTO_120MS
+  87:tmk_core/common/avr/suspend.c ****  *          WDTO_250MS
+  88:tmk_core/common/avr/suspend.c ****  *          WDTO_500MS
+  89:tmk_core/common/avr/suspend.c ****  *          WDTO_1S
+  90:tmk_core/common/avr/suspend.c ****  *          WDTO_2S
+  91:tmk_core/common/avr/suspend.c ****  *          WDTO_4S
+  92:tmk_core/common/avr/suspend.c ****  *          WDTO_8S
+  93:tmk_core/common/avr/suspend.c ****  */
+  94:tmk_core/common/avr/suspend.c **** static uint8_t wdt_timeout = 0;
+  95:tmk_core/common/avr/suspend.c **** 
+  96:tmk_core/common/avr/suspend.c **** /** \brief Power down
+  97:tmk_core/common/avr/suspend.c ****  *
+  98:tmk_core/common/avr/suspend.c ****  * FIXME: needs doc
+  99:tmk_core/common/avr/suspend.c ****  */
+ 100:tmk_core/common/avr/suspend.c **** static void power_down(uint8_t wdto) {
+ 101:tmk_core/common/avr/suspend.c **** #ifdef PROTOCOL_LUFA
+ 102:tmk_core/common/avr/suspend.c ****   if (USB_DeviceState == DEVICE_STATE_Configured) return;
+ 103:tmk_core/common/avr/suspend.c **** #endif
+ 104:tmk_core/common/avr/suspend.c ****   wdt_timeout = wdto;
+ 105:tmk_core/common/avr/suspend.c **** 
+ 106:tmk_core/common/avr/suspend.c ****   // Watchdog Interrupt Mode
+ 107:tmk_core/common/avr/suspend.c ****   wdt_intr_enable(wdto);
+ 108:tmk_core/common/avr/suspend.c **** 
+ 109:tmk_core/common/avr/suspend.c **** #ifdef BACKLIGHT_ENABLE
+ 110:tmk_core/common/avr/suspend.c ****   backlight_set(0);
+ 111:tmk_core/common/avr/suspend.c **** #endif
+ 112:tmk_core/common/avr/suspend.c **** 
+ 113:tmk_core/common/avr/suspend.c ****   // Turn off LED indicators
+ 114:tmk_core/common/avr/suspend.c ****   uint8_t leds_off = 0;
+ 115:tmk_core/common/avr/suspend.c **** #if defined(BACKLIGHT_CAPS_LOCK) && defined(BACKLIGHT_ENABLE)
+ 116:tmk_core/common/avr/suspend.c ****   if (is_backlight_enabled()) {
+ 117:tmk_core/common/avr/suspend.c ****     // Don't try to turn off Caps Lock indicator as it is backlight and backlight is already off
+ 118:tmk_core/common/avr/suspend.c ****     leds_off |= (1<<USB_LED_CAPS_LOCK);
+ 119:tmk_core/common/avr/suspend.c ****   }
+ 120:tmk_core/common/avr/suspend.c **** #endif
+ 121:tmk_core/common/avr/suspend.c ****   led_set(leds_off);
+ 122:tmk_core/common/avr/suspend.c **** 
+ 123:tmk_core/common/avr/suspend.c **** #ifdef AUDIO_ENABLE
+ 124:tmk_core/common/avr/suspend.c ****   // This sometimes disables the start-up noise, so it's been disabled
+ 125:tmk_core/common/avr/suspend.c ****   // stop_all_notes();
+ 126:tmk_core/common/avr/suspend.c **** #endif /* AUDIO_ENABLE */
+ 127:tmk_core/common/avr/suspend.c **** #if defined(RGBLIGHT_SLEEP) && defined(RGBLIGHT_ENABLE)
+ 128:tmk_core/common/avr/suspend.c **** #ifdef RGBLIGHT_ANIMATIONS
+ 129:tmk_core/common/avr/suspend.c ****   rgblight_timer_disable();
+ 130:tmk_core/common/avr/suspend.c **** #endif
+ 131:tmk_core/common/avr/suspend.c ****   if (!is_suspended) {
+ 132:tmk_core/common/avr/suspend.c ****     is_suspended = true;
+ 133:tmk_core/common/avr/suspend.c ****     rgblight_enabled = rgblight_config.enable;
+ 134:tmk_core/common/avr/suspend.c ****     rgblight_disable_noeeprom();
+ 135:tmk_core/common/avr/suspend.c ****   }
+ 136:tmk_core/common/avr/suspend.c **** #endif
+ 137:tmk_core/common/avr/suspend.c ****   suspend_power_down_kb();
+ 138:tmk_core/common/avr/suspend.c **** 
+ 139:tmk_core/common/avr/suspend.c ****     // TODO: more power saving
+ 140:tmk_core/common/avr/suspend.c ****     // See PicoPower application note
+ 141:tmk_core/common/avr/suspend.c ****     // - I/O port input with pullup
+ 142:tmk_core/common/avr/suspend.c ****     // - prescale clock
+ 143:tmk_core/common/avr/suspend.c ****     // - BOD disable
+ 144:tmk_core/common/avr/suspend.c ****     // - Power Reduction Register PRR
+ 145:tmk_core/common/avr/suspend.c ****     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+ 146:tmk_core/common/avr/suspend.c ****     sleep_enable();
+ 147:tmk_core/common/avr/suspend.c ****     sei();
+ 148:tmk_core/common/avr/suspend.c ****     sleep_cpu();
+ 149:tmk_core/common/avr/suspend.c ****     sleep_disable();
+ 150:tmk_core/common/avr/suspend.c **** 
+ 151:tmk_core/common/avr/suspend.c ****     // Disable watchdog after sleep
+ 152:tmk_core/common/avr/suspend.c ****     wdt_disable();
+ 153:tmk_core/common/avr/suspend.c **** }
+ 154:tmk_core/common/avr/suspend.c **** #endif
+ 155:tmk_core/common/avr/suspend.c **** 
+ 156:tmk_core/common/avr/suspend.c **** /** \brief Suspend power down
+ 157:tmk_core/common/avr/suspend.c ****  *
+ 158:tmk_core/common/avr/suspend.c ****  * FIXME: needs doc
+ 159:tmk_core/common/avr/suspend.c ****  */
+ 160:tmk_core/common/avr/suspend.c **** void suspend_power_down(void) {
+ 161:tmk_core/common/avr/suspend.c **** 	suspend_power_down_kb();
+ 162:tmk_core/common/avr/suspend.c **** 
+ 163:tmk_core/common/avr/suspend.c **** #ifndef NO_SUSPEND_POWER_DOWN
+ 164:tmk_core/common/avr/suspend.c ****     power_down(WDTO_15MS);
+ 165:tmk_core/common/avr/suspend.c **** #endif
+ 166:tmk_core/common/avr/suspend.c **** }
+ 167:tmk_core/common/avr/suspend.c **** 
+ 168:tmk_core/common/avr/suspend.c **** __attribute__ ((weak)) void matrix_power_up(void) {}
+ 169:tmk_core/common/avr/suspend.c **** __attribute__ ((weak)) void matrix_power_down(void) {}
+ 170:tmk_core/common/avr/suspend.c **** bool suspend_wakeup_condition(void) {
+ 171:tmk_core/common/avr/suspend.c ****     matrix_power_up();
+ 172:tmk_core/common/avr/suspend.c ****     matrix_scan();
+ 173:tmk_core/common/avr/suspend.c ****     matrix_power_down();
+ 174:tmk_core/common/avr/suspend.c ****     for (uint8_t r = 0; r < MATRIX_ROWS; r++) {
+ 175:tmk_core/common/avr/suspend.c ****         if (matrix_get_row(r)) return true;
+ 176:tmk_core/common/avr/suspend.c ****     }
+ 177:tmk_core/common/avr/suspend.c ****      return false;
+ 178:tmk_core/common/avr/suspend.c **** }
+ 179:tmk_core/common/avr/suspend.c **** 
+ 180:tmk_core/common/avr/suspend.c **** /** \brief run user level code immediately after wakeup
+ 181:tmk_core/common/avr/suspend.c ****  *
+ 182:tmk_core/common/avr/suspend.c ****  * FIXME: needs doc
+ 183:tmk_core/common/avr/suspend.c ****  */
+ 184:tmk_core/common/avr/suspend.c **** __attribute__ ((weak))
+ 185:tmk_core/common/avr/suspend.c **** void suspend_wakeup_init_user(void) { }
+  62               		.loc 1 185 0
+  63               		.cfi_startproc
+  64               	/* prologue: function */
+  65               	/* frame size = 0 */
+  66               	/* stack size = 0 */
+  67               	.L__stack_usage = 0
+  68 0000 0895      		ret
+  69               		.cfi_endproc
+  70               	.LFE116:
+  72               		.set	suspend_wakeup_init_user.localalias.0,suspend_wakeup_init_user
+  73               		.section	.text.matrix_power_down,"ax",@progbits
+  74               		.weak	matrix_power_down
+  76               	matrix_power_down:
+  77               	.LFB121:
+  78               		.cfi_startproc
+  79               	/* prologue: function */
+  80               	/* frame size = 0 */
+  81               	/* stack size = 0 */
+  82               	.L__stack_usage = 0
+  83 0000 0C94 0000 		jmp suspend_wakeup_init_user.localalias.0
+  84               		.cfi_endproc
+  85               	.LFE121:
+  87               		.section	.text.matrix_power_up,"ax",@progbits
+  88               		.weak	matrix_power_up
+  90               	matrix_power_up:
+  91               	.LFB123:
+  92               		.cfi_startproc
+  93               	/* prologue: function */
+  94               	/* frame size = 0 */
+  95               	/* stack size = 0 */
+  96               	.L__stack_usage = 0
+  97 0000 0C94 0000 		jmp suspend_wakeup_init_user.localalias.0
+  98               		.cfi_endproc
+  99               	.LFE123:
+ 101               		.section	.text.suspend_wakeup_condition,"ax",@progbits
+ 102               	.global	suspend_wakeup_condition
+ 104               	suspend_wakeup_condition:
+ 105               	.LFB115:
+ 170:tmk_core/common/avr/suspend.c ****     matrix_power_up();
+ 106               		.loc 1 170 0
+ 107               		.cfi_startproc
+ 108               	/* prologue: function */
+ 109               	/* frame size = 0 */
+ 110               	/* stack size = 0 */
+ 111               	.L__stack_usage = 0
+ 171:tmk_core/common/avr/suspend.c ****     matrix_scan();
+ 112               		.loc 1 171 0
+ 113 0000 0E94 0000 		call matrix_power_up
+ 114               	.LVL2:
+ 172:tmk_core/common/avr/suspend.c ****     matrix_power_down();
+ 115               		.loc 1 172 0
+ 116 0004 0E94 0000 		call matrix_scan
+ 117               	.LVL3:
+ 173:tmk_core/common/avr/suspend.c ****     for (uint8_t r = 0; r < MATRIX_ROWS; r++) {
+ 118               		.loc 1 173 0
+ 119 0008 0E94 0000 		call matrix_power_down
+ 120               	.LVL4:
+ 121               	.LBB7:
+ 175:tmk_core/common/avr/suspend.c ****     }
+ 122               		.loc 1 175 0
+ 123 000c 80E0      		ldi r24,0
+ 124 000e 0E94 0000 		call matrix_get_row
+ 125               	.LVL5:
+ 126 0012 8111      		cpse r24,__zero_reg__
+ 127 0014 00C0      		rjmp .L8
+ 128               	.LVL6:
+ 129 0016 81E0      		ldi r24,lo8(1)
+ 130 0018 0E94 0000 		call matrix_get_row
+ 131               	.LVL7:
+ 132 001c 91E0      		ldi r25,lo8(1)
+ 133 001e 8111      		cpse r24,__zero_reg__
+ 134 0020 00C0      		rjmp .L6
+ 135 0022 90E0      		ldi r25,0
+ 136 0024 00C0      		rjmp .L6
+ 137               	.LVL8:
+ 138               	.L8:
+ 139 0026 91E0      		ldi r25,lo8(1)
+ 140               	.LVL9:
+ 141               	.L6:
+ 142               	.LBE7:
+ 178:tmk_core/common/avr/suspend.c **** 
+ 143               		.loc 1 178 0
+ 144 0028 892F      		mov r24,r25
+ 145 002a 0895      		ret
+ 146               		.cfi_endproc
+ 147               	.LFE115:
+ 149               		.section	.text.suspend_power_down_user,"ax",@progbits
+ 150               		.weak	suspend_power_down_user
+ 152               	suspend_power_down_user:
+ 153               	.LFB125:
+ 154               		.cfi_startproc
+ 155               	/* prologue: function */
+ 156               	/* frame size = 0 */
+ 157               	/* stack size = 0 */
+ 158               	.L__stack_usage = 0
+ 159 0000 0C94 0000 		jmp suspend_wakeup_init_user.localalias.0
+ 160               		.cfi_endproc
+ 161               	.LFE125:
+ 163               		.section	.text.suspend_power_down_kb,"ax",@progbits
+ 164               		.weak	suspend_power_down_kb
+ 166               	suspend_power_down_kb:
+ 167               	.LFB110:
+  75:tmk_core/common/avr/suspend.c ****   suspend_power_down_user();
+ 168               		.loc 1 75 0
+ 169               		.cfi_startproc
+ 170               	/* prologue: function */
+ 171               	/* frame size = 0 */
+ 172               	/* stack size = 0 */
+ 173               	.L__stack_usage = 0
+  76:tmk_core/common/avr/suspend.c **** }
+ 174               		.loc 1 76 0
+ 175 0000 0C94 0000 		jmp suspend_power_down_user
+ 176               	.LVL10:
+ 177               		.cfi_endproc
+ 178               	.LFE110:
+ 180               		.section	.text.suspend_power_down,"ax",@progbits
+ 181               	.global	suspend_power_down
+ 183               	suspend_power_down:
+ 184               	.LFB112:
+ 160:tmk_core/common/avr/suspend.c **** 	suspend_power_down_kb();
+ 185               		.loc 1 160 0
+ 186               		.cfi_startproc
+ 187               	/* prologue: function */
+ 188               	/* frame size = 0 */
+ 189               	/* stack size = 0 */
+ 190               	.L__stack_usage = 0
+ 161:tmk_core/common/avr/suspend.c **** 
+ 191               		.loc 1 161 0
+ 192 0000 0E94 0000 		call suspend_power_down_kb
+ 193               	.LVL11:
+ 194               	.LBB12:
+ 195               	.LBB13:
+ 102:tmk_core/common/avr/suspend.c **** #endif
+ 196               		.loc 1 102 0
+ 197 0004 8091 0000 		lds r24,USB_DeviceState
+ 198 0008 8430      		cpi r24,lo8(4)
+ 199 000a 01F0      		breq .L12
+ 104:tmk_core/common/avr/suspend.c **** 
+ 200               		.loc 1 104 0
+ 201 000c 1092 0000 		sts wdt_timeout,__zero_reg__
+ 107:tmk_core/common/avr/suspend.c **** 
+ 202               		.loc 1 107 0
+ 203 0010 20E4      		ldi r18,lo8(64)
+ 204 0012 88E1      		ldi r24,lo8(24)
+ 205 0014 90E0      		ldi r25,0
+ 206               	/* #APP */
+ 207               	 ;  107 "tmk_core/common/avr/suspend.c" 1
+ 208 0016 0FB6      		in __tmp_reg__,__SREG__
+ 209 0018 F894      		cli
+ 210 001a A895      		wdr
+ 211 001c 8093 6000 		sts 96,r24
+ 212 0020 0FBE      		out __SREG__,__tmp_reg__
+ 213 0022 2093 6000 		sts 96,r18
+ 214               		
+ 215               	 ;  0 "" 2
+ 216               	.LVL12:
+ 121:tmk_core/common/avr/suspend.c **** 
+ 217               		.loc 1 121 0
+ 218               	/* #NOAPP */
+ 219 0026 80E0      		ldi r24,0
+ 220 0028 0E94 0000 		call led_set
+ 221               	.LVL13:
+ 137:tmk_core/common/avr/suspend.c **** 
+ 222               		.loc 1 137 0
+ 223 002c 0E94 0000 		call suspend_power_down_kb
+ 224               	.LVL14:
+ 145:tmk_core/common/avr/suspend.c ****     sleep_enable();
+ 225               		.loc 1 145 0
+ 226 0030 83B7      		in r24,0x33
+ 227 0032 817F      		andi r24,lo8(-15)
+ 228 0034 8460      		ori r24,lo8(4)
+ 229 0036 83BF      		out 0x33,r24
+ 146:tmk_core/common/avr/suspend.c ****     sei();
+ 230               		.loc 1 146 0
+ 231 0038 83B7      		in r24,0x33
+ 232 003a 8160      		ori r24,lo8(1)
+ 233 003c 83BF      		out 0x33,r24
+ 147:tmk_core/common/avr/suspend.c ****     sleep_cpu();
+ 234               		.loc 1 147 0
+ 235               	/* #APP */
+ 236               	 ;  147 "tmk_core/common/avr/suspend.c" 1
+ 237 003e 7894      		sei
+ 238               	 ;  0 "" 2
+ 148:tmk_core/common/avr/suspend.c ****     sleep_disable();
+ 239               		.loc 1 148 0
+ 240               	 ;  148 "tmk_core/common/avr/suspend.c" 1
+ 241 0040 8895      		sleep
+ 242               		
+ 243               	 ;  0 "" 2
+ 149:tmk_core/common/avr/suspend.c **** 
+ 244               		.loc 1 149 0
+ 245               	/* #NOAPP */
+ 246 0042 83B7      		in r24,0x33
+ 247 0044 8E7F      		andi r24,lo8(-2)
+ 248 0046 83BF      		out 0x33,r24
+ 249               	.LBB14:
+ 250               	.LBB15:
+ 251               		.file 2 "d:\\program files\\msys2\\home\\bnguy\\qmk_utils\\avr8-gnu-toolchain\\avr\\include\\avr\\
+   1:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** /* Copyright (c) 2002, 2004 Marek Michalkiewicz
+   2:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    Copyright (c) 2005, 2006, 2007 Eric B. Weddington
+   3:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    All rights reserved.
+   4:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+   5:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    Redistribution and use in source and binary forms, with or without
+   6:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    modification, are permitted provided that the following conditions are met:
+   7:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+   8:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    * Redistributions of source code must retain the above copyright
+   9:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****      notice, this list of conditions and the following disclaimer.
+  10:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  11:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    * Redistributions in binary form must reproduce the above copyright
+  12:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****      notice, this list of conditions and the following disclaimer in
+  13:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****      the documentation and/or other materials provided with the
+  14:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****      distribution.
+  15:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  16:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    * Neither the name of the copyright holders nor the names of
+  17:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****      contributors may be used to endorse or promote products derived
+  18:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****      from this software without specific prior written permission.
+  19:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  20:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  21:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  22:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  23:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  24:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  25:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  26:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  27:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  28:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  29:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  30:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****   POSSIBILITY OF SUCH DAMAGE. */
+  31:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  32:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** /* $Id$ */
+  33:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  34:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** /*
+  35:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    avr/wdt.h - macros for AVR watchdog timer
+  36:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****  */
+  37:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  38:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #ifndef _AVR_WDT_H_
+  39:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define _AVR_WDT_H_
+  40:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  41:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #include <avr/io.h>
+  42:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #include <stdint.h>
+  43:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  44:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** /** \file */
+  45:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** /** \defgroup avr_watchdog <avr/wdt.h>: Watchdog timer handling
+  46:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     \code #include <avr/wdt.h> \endcode
+  47:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  48:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     This header file declares the interface to some inline macros
+  49:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     handling the watchdog timer present in many AVR devices.  In order
+  50:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     to prevent the watchdog timer configuration from being
+  51:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     accidentally altered by a crashing application, a special timed
+  52:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     sequence is required in order to change it.  The macros within
+  53:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     this header file handle the required sequence automatically
+  54:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     before changing any value.  Interrupts will be disabled during
+  55:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     the manipulation.
+  56:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  57:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     \note Depending on the fuse configuration of the particular
+  58:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     device, further restrictions might apply, in particular it might
+  59:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     be disallowed to turn off the watchdog timer.
+  60:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  61:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     Note that for newer devices (ATmega88 and newer, effectively any
+  62:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     AVR that has the option to also generate interrupts), the watchdog
+  63:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     timer remains active even after a system reset (except a power-on
+  64:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     condition), using the fastest prescaler value (approximately 15
+  65:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     ms).  It is therefore required to turn off the watchdog early
+  66:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     during program startup, the datasheet recommends a sequence like
+  67:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     the following:
+  68:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  69:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     \code
+  70:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     #include <stdint.h>
+  71:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     #include <avr/wdt.h>
+  72:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  73:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     uint8_t mcusr_mirror __attribute__ ((section (".noinit")));
+  74:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  75:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     void get_mcusr(void) \
+  76:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       __attribute__((naked)) \
+  77:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       __attribute__((section(".init3")));
+  78:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     void get_mcusr(void)
+  79:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     {
+  80:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       mcusr_mirror = MCUSR;
+  81:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       MCUSR = 0;
+  82:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       wdt_disable();
+  83:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     }
+  84:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     \endcode
+  85:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  86:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     Saving the value of MCUSR in \c mcusr_mirror is only needed if the
+  87:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     application later wants to examine the reset source, but in particular, 
+  88:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     clearing the watchdog reset flag before disabling the
+  89:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     watchdog is required, according to the datasheet.
+  90:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** */
+  91:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  92:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** /**
+  93:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    \ingroup avr_watchdog
+  94:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    Reset the watchdog timer.  When the watchdog timer is enabled,
+  95:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    a call to this instruction is required before the timer expires,
+  96:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    otherwise a watchdog-initiated device reset will occur. 
+  97:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** */
+  98:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+  99:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define wdt_reset() __asm__ __volatile__ ("wdr")
+ 100:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 101:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #ifndef __DOXYGEN__
+ 102:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 103:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #if defined(WDP3)
+ 104:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** # define _WD_PS3_MASK       _BV(WDP3)
+ 105:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #else
+ 106:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** # define _WD_PS3_MASK       0x00
+ 107:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #endif
+ 108:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 109:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #if defined(WDTCSR)
+ 110:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #  define _WD_CONTROL_REG     WDTCSR
+ 111:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #elif defined(WDTCR)
+ 112:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #  define _WD_CONTROL_REG     WDTCR
+ 113:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #else
+ 114:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #  define _WD_CONTROL_REG     WDT
+ 115:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #endif
+ 116:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 117:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #if defined(WDTOE)
+ 118:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define _WD_CHANGE_BIT      WDTOE
+ 119:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #else
+ 120:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define _WD_CHANGE_BIT      WDCE
+ 121:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #endif
+ 122:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 123:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #endif	/* !__DOXYGEN__ */
+ 124:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 125:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 126:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** /**
+ 127:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    \ingroup avr_watchdog
+ 128:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    Enable the watchdog timer, configuring it for expiry after
+ 129:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    \c timeout (which is a combination of the \c WDP0 through
+ 130:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    \c WDP2 bits to write into the \c WDTCR register; For those devices 
+ 131:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    that have a \c WDTCSR register, it uses the combination of the \c WDP0 
+ 132:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    through \c WDP3 bits).
+ 133:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 134:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    See also the symbolic constants \c WDTO_15MS et al.
+ 135:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** */
+ 136:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 137:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 138:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #if defined(__AVR_XMEGA__)
+ 139:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 140:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #if defined (WDT_CTRLA) && !defined(RAMPD)
+ 141:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 142:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define wdt_enable(timeout) \
+ 143:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** do { \
+ 144:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** uint8_t temp; \
+ 145:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __asm__ __volatile__ ( \
+ 146:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"wdr"									"\n\t" \
+ 147:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"out %[ccp_reg], %[ioreg_cen_mask]"		"\n\t" \
+ 148:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"lds %[tmp], %[wdt_reg]"				"\n\t" \
+ 149:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"sbr %[tmp], %[wdt_enable_timeout]"		"\n\t" \
+ 150:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"sts %[wdt_reg], %[tmp]"				"\n\t" \
+ 151:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"1:lds %[tmp], %[wdt_status_reg]"		"\n\t" \
+ 152:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"sbrc %[tmp], %[wdt_syncbusy_bit]"		"\n\t" \
+ 153:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"rjmp 1b"								"\n\t" \
+ 154:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	: [tmp]					"=r" (temp) \
+ 155:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	: [ccp_reg]				"I"  (_SFR_IO_ADDR(CCP)), \
+ 156:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	  [ioreg_cen_mask]		"r"  ((uint8_t)CCP_IOREG_gc), \
+ 157:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	  [wdt_reg]				"n"  (_SFR_MEM_ADDR(WDT_CTRLA)), \
+ 158:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	  [wdt_enable_timeout]	"M"  (timeout), \
+ 159:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	  [wdt_status_reg]		"n"  (_SFR_MEM_ADDR(WDT_STATUS)), \
+ 160:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	  [wdt_syncbusy_bit]	"I"  (WDT_SYNCBUSY_bm) \
+ 161:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** ); \
+ 162:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** } while(0)
+ 163:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 164:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define wdt_disable() \
+ 165:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** do { \
+ 166:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** uint8_t temp; \
+ 167:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __asm__ __volatile__ (  \
+ 168:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"wdr"								"\n\t" \
+ 169:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"out %[ccp_reg], %[ioreg_cen_mask]" "\n\t" \
+ 170:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"lds %[tmp], %[wdt_reg]"			"\n\t" \
+ 171:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"cbr %[tmp], %[timeout_mask]"       "\n\t" \
+ 172:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	"sts %[wdt_reg], %[tmp]"			"\n\t" \
+ 173:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : [tmp]            "=r" (temp) \
+ 174:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : [ccp_reg]        "I" (_SFR_IO_ADDR(CCP)),       \
+ 175:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [ioreg_cen_mask] "r" ((uint8_t)CCP_IOREG_gc),   \
+ 176:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [wdt_reg]        "n" (_SFR_MEM_ADDR(WDT_CTRLA)),\
+ 177:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [timeout_mask]   "I" (WDT_PERIOD_gm) \
+ 178:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** ); \
+ 179:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** } while(0)
+ 180:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 181:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #else // defined (WDT_CTRLA) && !defined(RAMPD)
+ 182:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 183:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** /*
+ 184:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    wdt_enable(timeout) for xmega devices
+ 185:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** ** write signature (CCP_IOREG_gc) that enables change of protected I/O
+ 186:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    registers to the CCP register
+ 187:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** ** At the same time,
+ 188:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    1) set WDT change enable (WDT_CEN_bm)
+ 189:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    2) enable WDT (WDT_ENABLE_bm)
+ 190:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    3) set timeout (timeout)
+ 191:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** ** Synchronization starts when ENABLE bit of WDT is set. So, wait till it
+ 192:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    finishes (SYNCBUSY of STATUS register is automatically cleared after the
+ 193:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****    sync is finished).
+ 194:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** */
+ 195:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define wdt_enable(timeout) \
+ 196:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** do { \
+ 197:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** uint8_t temp; \
+ 198:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __asm__ __volatile__ (         \
+ 199:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "in __tmp_reg__, %[rampd]"              "\n\t" \
+ 200:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[rampd], __zero_reg__"            "\n\t" \
+ 201:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[ccp_reg], %[ioreg_cen_mask]"     "\n\t" \
+ 202:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "sts %[wdt_reg], %[wdt_enable_timeout]" "\n\t" \
+ 203:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "1:lds %[tmp], %[wdt_status_reg]"       "\n\t" \
+ 204:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "sbrc %[tmp], %[wdt_syncbusy_bit]"      "\n\t" \
+ 205:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "rjmp 1b"                               "\n\t" \
+ 206:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[rampd], __tmp_reg__"             "\n\t" \
+ 207:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : [tmp]                "=r" (temp) \
+ 208:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : [rampd]              "I" (_SFR_IO_ADDR(RAMPD)),      \
+ 209:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [ccp_reg]            "I" (_SFR_IO_ADDR(CCP)),        \
+ 210:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [ioreg_cen_mask]     "r" ((uint8_t)CCP_IOREG_gc),     \
+ 211:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [wdt_reg]            "n" (_SFR_MEM_ADDR(WDT_CTRL)),   \
+ 212:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [wdt_enable_timeout] "r" ((uint8_t)(WDT_CEN_bm | WDT_ENABLE_bm | timeout)), \
+ 213:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [wdt_status_reg]     "n" (_SFR_MEM_ADDR(WDT_STATUS)), \
+ 214:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [wdt_syncbusy_bit]   "I" (WDT_SYNCBUSY_bm)            \
+ 215:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : "r0" \
+ 216:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** ); \
+ 217:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** } while(0)
+ 218:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 219:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define wdt_disable() \
+ 220:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __asm__ __volatile__ (  \
+ 221:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "in __tmp_reg__, %[rampd]"          "\n\t" \
+ 222:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[rampd], __zero_reg__"        "\n\t" \
+ 223:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[ccp_reg], %[ioreg_cen_mask]" "\n\t" \
+ 224:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "sts %[wdt_reg], %[disable_mask]"   "\n\t" \
+ 225:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[rampd], __tmp_reg__"         "\n\t" \
+ 226:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : \
+ 227:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : [rampd]             "I" (_SFR_IO_ADDR(RAMPD)),    \
+ 228:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [ccp_reg]           "I" (_SFR_IO_ADDR(CCP)),      \
+ 229:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [ioreg_cen_mask]    "r" ((uint8_t)CCP_IOREG_gc),   \
+ 230:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [wdt_reg]           "n" (_SFR_MEM_ADDR(WDT_CTRL)), \
+ 231:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [disable_mask]      "r" ((uint8_t)((~WDT_ENABLE_bm) | WDT_CEN_bm)) \
+ 232:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : "r0" \
+ 233:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** );
+ 234:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 235:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #endif // defined (WDT_CTRLA) && !defined(RAMPD)
+ 236:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 237:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #elif defined(__AVR_TINY__)
+ 238:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 239:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define wdt_enable(value) \
+ 240:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __asm__ __volatile__ ( \
+ 241:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "in __tmp_reg__,__SREG__" "\n\t"  \
+ 242:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "cli" "\n\t"  \
+ 243:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "wdr" "\n\t"  \
+ 244:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[CCPADDRESS],%[SIGNATURE]" "\n\t"  \
+ 245:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[WDTREG],%[WDVALUE]" "\n\t"  \
+ 246:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out __SREG__,__tmp_reg__" "\n\t"  \
+ 247:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : /* no outputs */  \
+ 248:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : [CCPADDRESS] "I" (_SFR_IO_ADDR(CCP)),  \
+ 249:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [SIGNATURE] "r" ((uint8_t)0xD8), \
+ 250:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [WDTREG] "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)), \
+ 251:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [WDVALUE] "r" ((uint8_t)((value & 0x08 ? _WD_PS3_MASK : 0x00) \
+ 252:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       | _BV(WDE) | (value & 0x07) )) \
+ 253:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : "r16" \
+ 254:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** )
+ 255:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 256:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #define wdt_disable() \
+ 257:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** do { \
+ 258:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** uint8_t temp_wd; \
+ 259:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __asm__ __volatile__ ( \
+ 260:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "in __tmp_reg__,__SREG__" "\n\t"  \
+ 261:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "cli" "\n\t"  \
+ 262:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "wdr" "\n\t"  \
+ 263:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[CCPADDRESS],%[SIGNATURE]" "\n\t"  \
+ 264:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "in  %[TEMP_WD],%[WDTREG]" "\n\t" \
+ 265:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "cbr %[TEMP_WD],%[WDVALUE]" "\n\t" \
+ 266:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out %[WDTREG],%[TEMP_WD]" "\n\t" \
+ 267:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     "out __SREG__,__tmp_reg__" "\n\t" \
+ 268:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : /*no output */ \
+ 269:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : [CCPADDRESS] "I" (_SFR_IO_ADDR(CCP)), \
+ 270:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [SIGNATURE] "r" ((uint8_t)0xD8), \
+ 271:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [WDTREG] "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)), \
+ 272:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [TEMP_WD] "d" (temp_wd), \
+ 273:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****       [WDVALUE] "n" (1 << WDE) \
+ 274:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****     : "r16" \
+ 275:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** ); \
+ 276:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** }while(0)
+ 277:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 278:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #elif defined(CCP)
+ 279:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 280:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** static __inline__
+ 281:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __attribute__ ((__always_inline__))
+ 282:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** void wdt_enable (const uint8_t value)
+ 283:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** {
+ 284:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	if (!_SFR_IO_REG_P (CCP) && !_SFR_IO_REG_P (_WD_CONTROL_REG))
+ 285:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 286:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		__asm__ __volatile__ (
+ 287:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"in __tmp_reg__,__SREG__" "\n\t"
+ 288:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"cli" "\n\t"
+ 289:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"wdr" "\n\t"
+ 290:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"sts %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 291:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"sts %[WDTREG],%[WDVALUE]" "\n\t"
+ 292:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"out __SREG__,__tmp_reg__" "\n\t"
+ 293:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: /* no outputs */
+ 294:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: [CCPADDRESS] "n" (_SFR_MEM_ADDR(CCP)),
+ 295:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[SIGNATURE] "r" ((uint8_t)0xD8),
+ 296:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[WDTREG] "n" (_SFR_MEM_ADDR(_WD_CONTROL_REG)),
+ 297:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[WDVALUE] "r" ((uint8_t)((value & 0x08 ? _WD_PS3_MASK : 0x00)
+ 298:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				| _BV(WDE) | (value & 0x07) ))
+ 299:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: "r0"
+ 300:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			);
+ 301:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 302:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	else if (!_SFR_IO_REG_P (CCP) && _SFR_IO_REG_P (_WD_CONTROL_REG))
+ 303:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 304:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		__asm__ __volatile__ (
+ 305:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"in __tmp_reg__,__SREG__" "\n\t"
+ 306:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"cli" "\n\t"
+ 307:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"wdr" "\n\t"
+ 308:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"sts %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 309:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"out %[WDTREG],%[WDVALUE]" "\n\t"
+ 310:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"out __SREG__,__tmp_reg__" "\n\t"
+ 311:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: /* no outputs */
+ 312:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: [CCPADDRESS] "n" (_SFR_MEM_ADDR(CCP)),
+ 313:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[SIGNATURE] "r" ((uint8_t)0xD8),
+ 314:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[WDTREG] "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)),
+ 315:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[WDVALUE] "r" ((uint8_t)((value & 0x08 ? _WD_PS3_MASK : 0x00)
+ 316:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				| _BV(WDE) | (value & 0x07) ))
+ 317:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: "r0"
+ 318:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			);
+ 319:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 320:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	else if (_SFR_IO_REG_P (CCP) && !_SFR_IO_REG_P (_WD_CONTROL_REG))
+ 321:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 322:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		__asm__ __volatile__ (
+ 323:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"in __tmp_reg__,__SREG__" "\n\t"
+ 324:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"cli" "\n\t"
+ 325:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"wdr" "\n\t"
+ 326:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"out %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 327:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"sts %[WDTREG],%[WDVALUE]" "\n\t"
+ 328:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"out __SREG__,__tmp_reg__" "\n\t"
+ 329:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: /* no outputs */
+ 330:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: [CCPADDRESS] "I" (_SFR_IO_ADDR(CCP)),
+ 331:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[SIGNATURE] "r" ((uint8_t)0xD8),
+ 332:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[WDTREG] "n" (_SFR_MEM_ADDR(_WD_CONTROL_REG)),
+ 333:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[WDVALUE] "r" ((uint8_t)((value & 0x08 ? _WD_PS3_MASK : 0x00)
+ 334:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				| _BV(WDE) | (value & 0x07) ))
+ 335:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: "r0"
+ 336:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			);
+ 337:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 338:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	else
+ 339:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****  	{
+ 340:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		__asm__ __volatile__ (
+ 341:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"in __tmp_reg__,__SREG__" "\n\t"
+ 342:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"cli" "\n\t"
+ 343:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"wdr" "\n\t"
+ 344:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"out %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 345:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"out %[WDTREG],%[WDVALUE]" "\n\t"
+ 346:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			"out __SREG__,__tmp_reg__" "\n\t"
+ 347:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: /* no outputs */
+ 348:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: [CCPADDRESS] "I" (_SFR_IO_ADDR(CCP)),
+ 349:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[SIGNATURE] "r" ((uint8_t)0xD8),
+ 350:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[WDTREG] "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)),
+ 351:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			[WDVALUE] "r" ((uint8_t)((value & 0x08 ? _WD_PS3_MASK : 0x00)
+ 352:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				| _BV(WDE) | (value & 0x07) ))
+ 353:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			: "r0"
+ 354:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 			);
+ 355:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 356:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** }
+ 357:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 358:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** static __inline__
+ 359:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __attribute__ ((__always_inline__))
+ 360:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** void wdt_disable (void)
+ 361:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** {
+ 362:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	if (!_SFR_IO_REG_P (CCP) && !_SFR_IO_REG_P(_WD_CONTROL_REG))
+ 363:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 364:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         uint8_t temp_wd;
+ 365:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         __asm__ __volatile__ (
+ 366:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 367:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cli" "\n\t"
+ 368:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"wdr" "\n\t"
+ 369:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"sts %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 370:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"lds %[TEMP_WD],%[WDTREG]" "\n\t"
+ 371:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cbr %[TEMP_WD],%[WDVALUE]" "\n\t"
+ 372:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"sts %[WDTREG],%[TEMP_WD]" "\n\t"
+ 373:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out __SREG__,__tmp_reg__" "\n\t"
+ 374:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: /*no output */
+ 375:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: [CCPADDRESS] "n" (_SFR_MEM_ADDR(CCP)),
+ 376:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[SIGNATURE] "r" ((uint8_t)0xD8),
+ 377:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[WDTREG] "n" (_SFR_MEM_ADDR(_WD_CONTROL_REG)),
+ 378:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[TEMP_WD] "d" (temp_wd),
+ 379:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[WDVALUE] "n" (1 << WDE)
+ 380:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: "r0"
+ 381:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				);
+ 382:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 383:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	else if (!_SFR_IO_REG_P (CCP) && _SFR_IO_REG_P(_WD_CONTROL_REG))
+ 384:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 385:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         uint8_t temp_wd;
+ 386:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         __asm__ __volatile__ (
+ 387:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 388:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cli" "\n\t"
+ 389:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"wdr" "\n\t"
+ 390:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"sts %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 391:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in %[TEMP_WD],%[WDTREG]" "\n\t"
+ 392:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cbr %[TEMP_WD],%[WDVALUE]" "\n\t"
+ 393:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out %[WDTREG],%[TEMP_WD]" "\n\t"
+ 394:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out __SREG__,__tmp_reg__" "\n\t"
+ 395:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: /*no output */
+ 396:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: [CCPADDRESS] "n" (_SFR_MEM_ADDR(CCP)),
+ 397:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[SIGNATURE] "r" ((uint8_t)0xD8),
+ 398:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[WDTREG] "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)),
+ 399:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[TEMP_WD] "d" (temp_wd),
+ 400:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[WDVALUE] "n" (1 << WDE)
+ 401:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: "r0"
+ 402:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				);
+ 403:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 404:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	else if (_SFR_IO_REG_P (CCP) && !_SFR_IO_REG_P(_WD_CONTROL_REG))
+ 405:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 406:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         uint8_t temp_wd;
+ 407:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         __asm__ __volatile__ (
+ 408:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 409:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cli" "\n\t"
+ 410:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"wdr" "\n\t"
+ 411:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 412:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"lds %[TEMP_WD],%[WDTREG]" "\n\t"
+ 413:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cbr %[TEMP_WD],%[WDVALUE]" "\n\t"
+ 414:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"sts %[WDTREG],%[TEMP_WD]" "\n\t"
+ 415:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out __SREG__,__tmp_reg__" "\n\t"
+ 416:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: /*no output */
+ 417:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: [CCPADDRESS] "I" (_SFR_IO_ADDR(CCP)),
+ 418:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[SIGNATURE] "r" ((uint8_t)0xD8),
+ 419:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[WDTREG] "n" (_SFR_MEM_ADDR(_WD_CONTROL_REG)),
+ 420:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[TEMP_WD] "d" (temp_wd),
+ 421:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[WDVALUE] "n" (1 << WDE)
+ 422:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: "r0"
+ 423:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				);
+ 424:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 425:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	else
+ 426:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 427:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         uint8_t temp_wd;
+ 428:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         __asm__ __volatile__ (
+ 429:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 430:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cli" "\n\t"
+ 431:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"wdr" "\n\t"
+ 432:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 433:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in %[TEMP_WD],%[WDTREG]" "\n\t"
+ 434:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cbr %[TEMP_WD],%[WDVALUE]" "\n\t"
+ 435:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out %[WDTREG],%[TEMP_WD]" "\n\t"
+ 436:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out __SREG__,__tmp_reg__" "\n\t"
+ 437:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: /*no output */
+ 438:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: [CCPADDRESS] "I" (_SFR_IO_ADDR(CCP)),
+ 439:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[SIGNATURE] "r" ((uint8_t)0xD8),
+ 440:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[WDTREG] "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)),
+ 441:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[TEMP_WD] "d" (temp_wd),
+ 442:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[WDVALUE] "n" (1 << WDE)
+ 443:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: "r0"
+ 444:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				);
+ 445:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 446:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** }
+ 447:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 448:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** #else
+ 449:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 450:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** static __inline__
+ 451:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __attribute__ ((__always_inline__))
+ 452:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** void wdt_enable (const uint8_t value)
+ 453:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** {
+ 454:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	if (_SFR_IO_REG_P (_WD_CONTROL_REG))
+ 455:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 456:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		__asm__ __volatile__ (
+ 457:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 458:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cli" "\n\t"
+ 459:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"wdr" "\n\t"
+ 460:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out %0, %1" "\n\t"
+ 461:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out __SREG__,__tmp_reg__" "\n\t"
+ 462:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out %0, %2" "\n \t"
+ 463:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: /* no outputs */
+ 464:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)),
+ 465:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"r" ((uint8_t)(_BV(_WD_CHANGE_BIT) | _BV(WDE))),
+ 466:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"r" ((uint8_t) ((value & 0x08 ? _WD_PS3_MASK : 0x00) |
+ 467:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 						_BV(WDE) | (value & 0x07)) )
+ 468:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: "r0"
+ 469:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		);
+ 470:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 471:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	else
+ 472:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 473:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		__asm__ __volatile__ (
+ 474:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 475:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cli" "\n\t"
+ 476:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"wdr" "\n\t"
+ 477:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"sts %0, %1" "\n\t"
+ 478:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out __SREG__,__tmp_reg__" "\n\t"
+ 479:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"sts %0, %2" "\n \t"
+ 480:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: /* no outputs */
+ 481:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: "n" (_SFR_MEM_ADDR(_WD_CONTROL_REG)),
+ 482:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"r" ((uint8_t)(_BV(_WD_CHANGE_BIT) | _BV(WDE))),
+ 483:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"r" ((uint8_t) ((value & 0x08 ? _WD_PS3_MASK : 0x00) |
+ 484:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 						_BV(WDE) | (value & 0x07)) )
+ 485:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: "r0"
+ 486:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		);
+ 487:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 488:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** }
+ 489:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 
+ 490:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** static __inline__
+ 491:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** __attribute__ ((__always_inline__))
+ 492:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** void wdt_disable (void)
+ 493:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** {
+ 494:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	if (_SFR_IO_REG_P (_WD_CONTROL_REG))
+ 495:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 496:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         uint8_t register temp_reg;
+ 497:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		__asm__ __volatile__ (
+ 498:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in __tmp_reg__,__SREG__"    "\n\t"
+ 499:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"cli"                        "\n\t"
+ 500:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"wdr"                        "\n\t"
+ 501:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"in  %[TEMPREG],%[WDTREG]"   "\n\t"
+ 502:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"ori %[TEMPREG],%[WDCE_WDE]" "\n\t"
+ 503:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out %[WDTREG],%[TEMPREG]"   "\n\t"
+ 504:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out %[WDTREG],__zero_reg__" "\n\t"
+ 505:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				"out __SREG__,__tmp_reg__"   "\n\t"
+ 506:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: [TEMPREG] "=d" (temp_reg)
+ 507:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: [WDTREG]  "I"  (_SFR_IO_ADDR(_WD_CONTROL_REG)),
+ 508:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				[WDCE_WDE]  "n"  ((uint8_t)(_BV(_WD_CHANGE_BIT) | _BV(WDE)))
+ 509:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 				: "r0"
+ 510:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		);
+ 511:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	}
+ 512:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	else
+ 513:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 	{
+ 514:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h ****         uint8_t register temp_reg;
+ 515:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h **** 		__asm__ __volatile__ (
+ 252               		.loc 2 515 0
+ 253               	/* #APP */
+ 254               	 ;  515 "d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\avr\wdt.h" 1
+ 255 0048 0FB6      		in __tmp_reg__,__SREG__
+ 256 004a F894      		cli
+ 257 004c A895      		wdr
+ 258 004e 8091 6000 		lds r24,96
+ 259 0052 8861      		ori r24,24
+ 260 0054 8093 6000 		sts 96,r24
+ 261 0058 1092 6000 		sts 96,__zero_reg__
+ 262 005c 0FBE      		out __SREG__,__tmp_reg__
+ 263               		
+ 264               	 ;  0 "" 2
+ 265               	.LVL15:
+ 266               	/* #NOAPP */
+ 267               	.L12:
+ 268 005e 0895      		ret
+ 269               	.LBE15:
+ 270               	.LBE14:
+ 271               	.LBE13:
+ 272               	.LBE12:
+ 273               		.cfi_endproc
+ 274               	.LFE112:
+ 276               		.section	.text.suspend_wakeup_init_kb,"ax",@progbits
+ 277               		.weak	suspend_wakeup_init_kb
+ 279               	suspend_wakeup_init_kb:
+ 280               	.LFB117:
+ 186:tmk_core/common/avr/suspend.c **** 
+ 187:tmk_core/common/avr/suspend.c **** /** \brief run keyboard level code immediately after wakeup
+ 188:tmk_core/common/avr/suspend.c ****  *
+ 189:tmk_core/common/avr/suspend.c ****  * FIXME: needs doc
+ 190:tmk_core/common/avr/suspend.c ****  */
+ 191:tmk_core/common/avr/suspend.c **** __attribute__ ((weak))
+ 192:tmk_core/common/avr/suspend.c **** void suspend_wakeup_init_kb(void) {
+ 281               		.loc 1 192 0
+ 282               		.cfi_startproc
+ 283               	/* prologue: function */
+ 284               	/* frame size = 0 */
+ 285               	/* stack size = 0 */
+ 286               	.L__stack_usage = 0
+ 193:tmk_core/common/avr/suspend.c ****   suspend_wakeup_init_user();
+ 287               		.loc 1 193 0
+ 288 0000 0C94 0000 		jmp suspend_wakeup_init_user
+ 289               	.LVL16:
+ 290               		.cfi_endproc
+ 291               	.LFE117:
+ 293               		.section	.text.suspend_wakeup_init,"ax",@progbits
+ 294               	.global	suspend_wakeup_init
+ 296               	suspend_wakeup_init:
+ 297               	.LFB118:
+ 194:tmk_core/common/avr/suspend.c **** }
+ 195:tmk_core/common/avr/suspend.c **** /** \brief run immediately after wakeup
+ 196:tmk_core/common/avr/suspend.c ****  *
+ 197:tmk_core/common/avr/suspend.c ****  * FIXME: needs doc
+ 198:tmk_core/common/avr/suspend.c ****  */
+ 199:tmk_core/common/avr/suspend.c **** void suspend_wakeup_init(void) {
+ 298               		.loc 1 199 0
+ 299               		.cfi_startproc
+ 300               	/* prologue: function */
+ 301               	/* frame size = 0 */
+ 302               	/* stack size = 0 */
+ 303               	.L__stack_usage = 0
+ 200:tmk_core/common/avr/suspend.c ****     // clear keyboard state
+ 201:tmk_core/common/avr/suspend.c ****     clear_keyboard();
+ 304               		.loc 1 201 0
+ 305 0000 0E94 0000 		call clear_keyboard
+ 306               	.LVL17:
+ 202:tmk_core/common/avr/suspend.c **** #ifdef BACKLIGHT_ENABLE
+ 203:tmk_core/common/avr/suspend.c ****     backlight_init();
+ 204:tmk_core/common/avr/suspend.c **** #endif
+ 205:tmk_core/common/avr/suspend.c **** 	led_set(host_keyboard_leds());
+ 307               		.loc 1 205 0
+ 308 0004 0E94 0000 		call host_keyboard_leds
+ 309               	.LVL18:
+ 310 0008 0E94 0000 		call led_set
+ 311               	.LVL19:
+ 206:tmk_core/common/avr/suspend.c **** #if defined(RGBLIGHT_SLEEP) && defined(RGBLIGHT_ENABLE)
+ 207:tmk_core/common/avr/suspend.c ****   is_suspended = false;
+ 208:tmk_core/common/avr/suspend.c ****   if (rgblight_enabled) {
+ 209:tmk_core/common/avr/suspend.c ****     #ifdef BOOTLOADER_TEENSY
+ 210:tmk_core/common/avr/suspend.c ****       wait_ms(10);
+ 211:tmk_core/common/avr/suspend.c ****     #endif
+ 212:tmk_core/common/avr/suspend.c ****     rgblight_enable_noeeprom();
+ 213:tmk_core/common/avr/suspend.c ****   }
+ 214:tmk_core/common/avr/suspend.c **** #ifdef RGBLIGHT_ANIMATIONS
+ 215:tmk_core/common/avr/suspend.c ****   rgblight_timer_enable();
+ 216:tmk_core/common/avr/suspend.c **** #endif
+ 217:tmk_core/common/avr/suspend.c **** #endif
+ 218:tmk_core/common/avr/suspend.c ****     suspend_wakeup_init_kb();
+ 312               		.loc 1 218 0
+ 313 000c 0C94 0000 		jmp suspend_wakeup_init_kb
+ 314               	.LVL20:
+ 315               		.cfi_endproc
+ 316               	.LFE118:
+ 318               		.section	.text.__vector_12,"ax",@progbits
+ 319               	.global	__vector_12
+ 321               	__vector_12:
+ 322               	.LFB119:
+ 219:tmk_core/common/avr/suspend.c **** }
+ 220:tmk_core/common/avr/suspend.c **** 
+ 221:tmk_core/common/avr/suspend.c **** #ifndef NO_SUSPEND_POWER_DOWN
+ 222:tmk_core/common/avr/suspend.c **** /* watchdog timeout */
+ 223:tmk_core/common/avr/suspend.c **** ISR(WDT_vect) {
+ 323               		.loc 1 223 0
+ 324               		.cfi_startproc
+ 325 0000 1F92      		push r1
+ 326               	.LCFI0:
+ 327               		.cfi_def_cfa_offset 3
+ 328               		.cfi_offset 1, -2
+ 329 0002 0F92      		push r0
+ 330               	.LCFI1:
+ 331               		.cfi_def_cfa_offset 4
+ 332               		.cfi_offset 0, -3
+ 333 0004 0FB6      		in r0,__SREG__
+ 334 0006 0F92      		push r0
+ 335 0008 1124      		clr __zero_reg__
+ 336 000a 8F93      		push r24
+ 337               	.LCFI2:
+ 338               		.cfi_def_cfa_offset 5
+ 339               		.cfi_offset 24, -4
+ 340 000c 9F93      		push r25
+ 341               	.LCFI3:
+ 342               		.cfi_def_cfa_offset 6
+ 343               		.cfi_offset 25, -5
+ 344 000e AF93      		push r26
+ 345               	.LCFI4:
+ 346               		.cfi_def_cfa_offset 7
+ 347               		.cfi_offset 26, -6
+ 348 0010 BF93      		push r27
+ 349               	.LCFI5:
+ 350               		.cfi_def_cfa_offset 8
+ 351               		.cfi_offset 27, -7
+ 352               	/* prologue: Signal */
+ 353               	/* frame size = 0 */
+ 354               	/* stack size = 7 */
+ 355               	.L__stack_usage = 7
+ 224:tmk_core/common/avr/suspend.c ****     // compensate timer for sleep
+ 225:tmk_core/common/avr/suspend.c ****     switch (wdt_timeout) {
+ 356               		.loc 1 225 0
+ 357 0012 8091 0000 		lds r24,wdt_timeout
+ 358 0016 8111      		cpse r24,__zero_reg__
+ 359 0018 00C0      		rjmp .L19
+ 226:tmk_core/common/avr/suspend.c ****         case WDTO_15MS:
+ 227:tmk_core/common/avr/suspend.c ****             timer_count += 15 + 2;  // WDTO_15MS + 2(from observation)
+ 360               		.loc 1 227 0
+ 361 001a 8091 0000 		lds r24,timer_count
+ 362 001e 9091 0000 		lds r25,timer_count+1
+ 363 0022 A091 0000 		lds r26,timer_count+2
+ 364 0026 B091 0000 		lds r27,timer_count+3
+ 365 002a 4196      		adiw r24,17
+ 366 002c A11D      		adc r26,__zero_reg__
+ 367 002e B11D      		adc r27,__zero_reg__
+ 368 0030 8093 0000 		sts timer_count,r24
+ 369 0034 9093 0000 		sts timer_count+1,r25
+ 370 0038 A093 0000 		sts timer_count+2,r26
+ 371 003c B093 0000 		sts timer_count+3,r27
+ 372               	.L19:
+ 373               	/* epilogue start */
+ 228:tmk_core/common/avr/suspend.c ****             break;
+ 229:tmk_core/common/avr/suspend.c ****         default:
+ 230:tmk_core/common/avr/suspend.c ****             ;
+ 231:tmk_core/common/avr/suspend.c ****     }
+ 232:tmk_core/common/avr/suspend.c **** }
+ 374               		.loc 1 232 0
+ 375 0040 BF91      		pop r27
+ 376 0042 AF91      		pop r26
+ 377 0044 9F91      		pop r25
+ 378 0046 8F91      		pop r24
+ 379 0048 0F90      		pop r0
+ 380 004a 0FBE      		out __SREG__,r0
+ 381 004c 0F90      		pop r0
+ 382 004e 1F90      		pop r1
+ 383 0050 1895      		reti
+ 384               		.cfi_endproc
+ 385               	.LFE119:
+ 387               		.section	.bss.wdt_timeout,"aw",@nobits
+ 390               	wdt_timeout:
+ 391 0000 00        		.zero	1
+ 392               		.text
+ 393               	.Letext0:
+ 394               		.file 3 "d:\\program files\\msys2\\home\\bnguy\\qmk_utils\\avr8-gnu-toolchain\\avr\\include\\stdin
+ 395               		.file 4 "tmk_core/common/timer.h"
+ 396               		.file 5 "lib/lufa/LUFA/Drivers/USB/Core/USBTask.h"
+ 397               		.file 6 "tmk_core/common/matrix.h"
+ 398               		.file 7 "tmk_core/common/led.h"
+ 399               		.file 8 "tmk_core/common/action.h"
+ 400               		.file 9 "tmk_core/common/host.h"
+ 401               		.file 10 "lib/lufa/LUFA/Drivers/USB/Core/AVR8/../Device.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 suspend.c
+D:\Program Files\msys2\tmp\ccrM8hUM.s:2      *ABS*:0000003e __SP_H__
+D:\Program Files\msys2\tmp\ccrM8hUM.s:3      *ABS*:0000003d __SP_L__
+D:\Program Files\msys2\tmp\ccrM8hUM.s:4      *ABS*:0000003f __SREG__
+D:\Program Files\msys2\tmp\ccrM8hUM.s:5      *ABS*:00000000 __tmp_reg__
+D:\Program Files\msys2\tmp\ccrM8hUM.s:6      *ABS*:00000001 __zero_reg__
+D:\Program Files\msys2\tmp\ccrM8hUM.s:13     .text.suspend_idle:00000000 suspend_idle
+D:\Program Files\msys2\tmp\ccrM8hUM.s:60     .text.suspend_wakeup_init_user:00000000 suspend_wakeup_init_user
+D:\Program Files\msys2\tmp\ccrM8hUM.s:60     .text.suspend_wakeup_init_user:00000000 suspend_wakeup_init_user.localalias.0
+D:\Program Files\msys2\tmp\ccrM8hUM.s:76     .text.matrix_power_down:00000000 matrix_power_down
+D:\Program Files\msys2\tmp\ccrM8hUM.s:90     .text.matrix_power_up:00000000 matrix_power_up
+D:\Program Files\msys2\tmp\ccrM8hUM.s:104    .text.suspend_wakeup_condition:00000000 suspend_wakeup_condition
+D:\Program Files\msys2\tmp\ccrM8hUM.s:152    .text.suspend_power_down_user:00000000 suspend_power_down_user
+D:\Program Files\msys2\tmp\ccrM8hUM.s:166    .text.suspend_power_down_kb:00000000 suspend_power_down_kb
+D:\Program Files\msys2\tmp\ccrM8hUM.s:183    .text.suspend_power_down:00000000 suspend_power_down
+D:\Program Files\msys2\tmp\ccrM8hUM.s:390    .bss.wdt_timeout:00000000 wdt_timeout
+D:\Program Files\msys2\tmp\ccrM8hUM.s:279    .text.suspend_wakeup_init_kb:00000000 suspend_wakeup_init_kb
+D:\Program Files\msys2\tmp\ccrM8hUM.s:296    .text.suspend_wakeup_init:00000000 suspend_wakeup_init
+D:\Program Files\msys2\tmp\ccrM8hUM.s:321    .text.__vector_12:00000000 __vector_12
+
+UNDEFINED SYMBOLS
+matrix_scan
+matrix_get_row
+USB_DeviceState
+led_set
+clear_keyboard
+host_keyboard_leds
+timer_count
+__do_clear_bss

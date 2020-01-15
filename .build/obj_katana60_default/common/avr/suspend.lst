@@ -1,0 +1,1154 @@
+   1               		.file	"suspend.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.suspend_idle,"ax",@progbits
+  11               	.global	suspend_idle
+  13               	suspend_idle:
+  14               	.LFB108:
+  15               		.file 1 "tmk_core/common/avr/suspend.c"
+   1:tmk_core/common/avr/suspend.c **** #include <stdbool.h>
+   2:tmk_core/common/avr/suspend.c **** #include <avr/sleep.h>
+   3:tmk_core/common/avr/suspend.c **** #include <avr/wdt.h>
+   4:tmk_core/common/avr/suspend.c **** #include <avr/interrupt.h>
+   5:tmk_core/common/avr/suspend.c **** #include "matrix.h"
+   6:tmk_core/common/avr/suspend.c **** #include "action.h"
+   7:tmk_core/common/avr/suspend.c **** #include "backlight.h"
+   8:tmk_core/common/avr/suspend.c **** #include "suspend_avr.h"
+   9:tmk_core/common/avr/suspend.c **** #include "suspend.h"
+  10:tmk_core/common/avr/suspend.c **** #include "timer.h"
+  11:tmk_core/common/avr/suspend.c **** #include "led.h"
+  12:tmk_core/common/avr/suspend.c **** #include "host.h"
+  13:tmk_core/common/avr/suspend.c **** #include "rgblight_reconfig.h"
+  14:tmk_core/common/avr/suspend.c **** 
+  15:tmk_core/common/avr/suspend.c **** #ifdef PROTOCOL_LUFA
+  16:tmk_core/common/avr/suspend.c **** 	#include "lufa.h"
+  17:tmk_core/common/avr/suspend.c **** #endif
+  18:tmk_core/common/avr/suspend.c **** 
+  19:tmk_core/common/avr/suspend.c **** #ifdef AUDIO_ENABLE
+  20:tmk_core/common/avr/suspend.c ****     #include "audio.h"
+  21:tmk_core/common/avr/suspend.c **** #endif /* AUDIO_ENABLE */
+  22:tmk_core/common/avr/suspend.c **** 
+  23:tmk_core/common/avr/suspend.c **** #if defined(RGBLIGHT_SLEEP) && defined(RGBLIGHT_ENABLE)
+  24:tmk_core/common/avr/suspend.c ****   #include "rgblight.h"
+  25:tmk_core/common/avr/suspend.c ****   extern rgblight_config_t rgblight_config;
+  26:tmk_core/common/avr/suspend.c ****   static bool rgblight_enabled;
+  27:tmk_core/common/avr/suspend.c ****   static bool is_suspended;
+  28:tmk_core/common/avr/suspend.c **** #endif
+  29:tmk_core/common/avr/suspend.c **** 
+  30:tmk_core/common/avr/suspend.c **** 
+  31:tmk_core/common/avr/suspend.c **** #define wdt_intr_enable(value)   \
+  32:tmk_core/common/avr/suspend.c **** __asm__ __volatile__ (  \
+  33:tmk_core/common/avr/suspend.c ****     "in __tmp_reg__,__SREG__" "\n\t"    \
+  34:tmk_core/common/avr/suspend.c ****     "cli" "\n\t"    \
+  35:tmk_core/common/avr/suspend.c ****     "wdr" "\n\t"    \
+  36:tmk_core/common/avr/suspend.c ****     "sts %0,%1" "\n\t"  \
+  37:tmk_core/common/avr/suspend.c ****     "out __SREG__,__tmp_reg__" "\n\t"   \
+  38:tmk_core/common/avr/suspend.c ****     "sts %0,%2" "\n\t" \
+  39:tmk_core/common/avr/suspend.c ****     : /* no outputs */  \
+  40:tmk_core/common/avr/suspend.c ****     : "M" (_SFR_MEM_ADDR(_WD_CONTROL_REG)), \
+  41:tmk_core/common/avr/suspend.c ****     "r" (_BV(_WD_CHANGE_BIT) | _BV(WDE)), \
+  42:tmk_core/common/avr/suspend.c ****     "r" ((uint8_t) ((value & 0x08 ? _WD_PS3_MASK : 0x00) | \
+  43:tmk_core/common/avr/suspend.c ****         _BV(WDIE) | (value & 0x07)) ) \
+  44:tmk_core/common/avr/suspend.c ****     : "r0"  \
+  45:tmk_core/common/avr/suspend.c **** )
+  46:tmk_core/common/avr/suspend.c **** 
+  47:tmk_core/common/avr/suspend.c **** 
+  48:tmk_core/common/avr/suspend.c **** /** \brief Suspend idle
+  49:tmk_core/common/avr/suspend.c ****  *
+  50:tmk_core/common/avr/suspend.c ****  * FIXME: needs doc
+  51:tmk_core/common/avr/suspend.c ****  */
+  52:tmk_core/common/avr/suspend.c **** void suspend_idle(uint8_t time) {
+  16               		.loc 1 52 0
+  17               		.cfi_startproc
+  18               	.LVL0:
+  19               	/* prologue: function */
+  20               	/* frame size = 0 */
+  21               	/* stack size = 0 */
+  22               	.L__stack_usage = 0
+  53:tmk_core/common/avr/suspend.c ****     cli();
+  23               		.loc 1 53 0
+  24               	/* #APP */
+  25               	 ;  53 "tmk_core/common/avr/suspend.c" 1
+  26 0000 F894      		cli
+  27               	 ;  0 "" 2
+  54:tmk_core/common/avr/suspend.c ****     set_sleep_mode(SLEEP_MODE_IDLE);
+  28               		.loc 1 54 0
+  29               	/* #NOAPP */
+  30 0002 83B7      		in r24,0x33
+  31               	.LVL1:
+  32 0004 817F      		andi r24,lo8(-15)
+  33 0006 83BF      		out 0x33,r24
+  55:tmk_core/common/avr/suspend.c ****     sleep_enable();
+  34               		.loc 1 55 0
+  35 0008 83B7      		in r24,0x33
+  36 000a 8160      		ori r24,lo8(1)
+  37 000c 83BF      		out 0x33,r24
+  56:tmk_core/common/avr/suspend.c ****     sei();
+  38               		.loc 1 56 0
+  39               	/* #APP */
+  40               	 ;  56 "tmk_core/common/avr/suspend.c" 1
+  41 000e 7894      		sei
+  42               	 ;  0 "" 2
+  57:tmk_core/common/avr/suspend.c ****     sleep_cpu();
+  43               		.loc 1 57 0
+  44               	 ;  57 "tmk_core/common/avr/suspend.c" 1
+  45 0010 8895      		sleep
+  46               		
+  47               	 ;  0 "" 2
+  58:tmk_core/common/avr/suspend.c ****     sleep_disable();
+  48               		.loc 1 58 0
+  49               	/* #NOAPP */
+  50 0012 83B7      		in r24,0x33
+  51 0014 8E7F      		andi r24,lo8(-2)
+  52 0016 83BF      		out 0x33,r24
+  53               	/* epilogue start */
+  59:tmk_core/common/avr/suspend.c **** }
+  54               		.loc 1 59 0
+  55 0018 0895      		ret
+  56               		.cfi_endproc
+  57               	.LFE108:
+  59               		.section	.text.matrix_power_up,"ax",@progbits
+  60               		.weak	matrix_power_up
+  62               	matrix_power_up:
+  63               	.LFB113:
+  60:tmk_core/common/avr/suspend.c **** 
+  61:tmk_core/common/avr/suspend.c **** 
+  62:tmk_core/common/avr/suspend.c **** // TODO: This needs some cleanup
+  63:tmk_core/common/avr/suspend.c **** 
+  64:tmk_core/common/avr/suspend.c **** /** \brief Run keyboard level Power down
+  65:tmk_core/common/avr/suspend.c ****  *
+  66:tmk_core/common/avr/suspend.c ****  * FIXME: needs doc
+  67:tmk_core/common/avr/suspend.c ****  */
+  68:tmk_core/common/avr/suspend.c **** __attribute__ ((weak))
+  69:tmk_core/common/avr/suspend.c **** void suspend_power_down_user (void) { }
+  70:tmk_core/common/avr/suspend.c **** /** \brief Run keyboard level Power down
+  71:tmk_core/common/avr/suspend.c ****  *
+  72:tmk_core/common/avr/suspend.c ****  * FIXME: needs doc
+  73:tmk_core/common/avr/suspend.c ****  */
+  74:tmk_core/common/avr/suspend.c **** __attribute__ ((weak))
+  75:tmk_core/common/avr/suspend.c **** void suspend_power_down_kb(void) {
+  76:tmk_core/common/avr/suspend.c ****   suspend_power_down_user();
+  77:tmk_core/common/avr/suspend.c **** }
+  78:tmk_core/common/avr/suspend.c **** 
+  79:tmk_core/common/avr/suspend.c **** #ifndef NO_SUSPEND_POWER_DOWN
+  80:tmk_core/common/avr/suspend.c **** /** \brief Power down MCU with watchdog timer
+  81:tmk_core/common/avr/suspend.c ****  *
+  82:tmk_core/common/avr/suspend.c ****  * wdto: watchdog timer timeout defined in <avr/wdt.h>
+  83:tmk_core/common/avr/suspend.c ****  *          WDTO_15MS
+  84:tmk_core/common/avr/suspend.c ****  *          WDTO_30MS
+  85:tmk_core/common/avr/suspend.c ****  *          WDTO_60MS
+  86:tmk_core/common/avr/suspend.c ****  *          WDTO_120MS
+  87:tmk_core/common/avr/suspend.c ****  *          WDTO_250MS
+  88:tmk_core/common/avr/suspend.c ****  *          WDTO_500MS
+  89:tmk_core/common/avr/suspend.c ****  *          WDTO_1S
+  90:tmk_core/common/avr/suspend.c ****  *          WDTO_2S
+  91:tmk_core/common/avr/suspend.c ****  *          WDTO_4S
+  92:tmk_core/common/avr/suspend.c ****  *          WDTO_8S
+  93:tmk_core/common/avr/suspend.c ****  */
+  94:tmk_core/common/avr/suspend.c **** static uint8_t wdt_timeout = 0;
+  95:tmk_core/common/avr/suspend.c **** 
+  96:tmk_core/common/avr/suspend.c **** /** \brief Power down
+  97:tmk_core/common/avr/suspend.c ****  *
+  98:tmk_core/common/avr/suspend.c ****  * FIXME: needs doc
+  99:tmk_core/common/avr/suspend.c ****  */
+ 100:tmk_core/common/avr/suspend.c **** static void power_down(uint8_t wdto) {
+ 101:tmk_core/common/avr/suspend.c **** #ifdef PROTOCOL_LUFA
+ 102:tmk_core/common/avr/suspend.c ****   if (USB_DeviceState == DEVICE_STATE_Configured) return;
+ 103:tmk_core/common/avr/suspend.c **** #endif
+ 104:tmk_core/common/avr/suspend.c ****   wdt_timeout = wdto;
+ 105:tmk_core/common/avr/suspend.c **** 
+ 106:tmk_core/common/avr/suspend.c ****   // Watchdog Interrupt Mode
+ 107:tmk_core/common/avr/suspend.c ****   wdt_intr_enable(wdto);
+ 108:tmk_core/common/avr/suspend.c **** 
+ 109:tmk_core/common/avr/suspend.c **** #ifdef BACKLIGHT_ENABLE
+ 110:tmk_core/common/avr/suspend.c ****   backlight_set(0);
+ 111:tmk_core/common/avr/suspend.c **** #endif
+ 112:tmk_core/common/avr/suspend.c **** 
+ 113:tmk_core/common/avr/suspend.c ****   // Turn off LED indicators
+ 114:tmk_core/common/avr/suspend.c ****   uint8_t leds_off = 0;
+ 115:tmk_core/common/avr/suspend.c **** #if defined(BACKLIGHT_CAPS_LOCK) && defined(BACKLIGHT_ENABLE)
+ 116:tmk_core/common/avr/suspend.c ****   if (is_backlight_enabled()) {
+ 117:tmk_core/common/avr/suspend.c ****     // Don't try to turn off Caps Lock indicator as it is backlight and backlight is already off
+ 118:tmk_core/common/avr/suspend.c ****     leds_off |= (1<<USB_LED_CAPS_LOCK);
+ 119:tmk_core/common/avr/suspend.c ****   }
+ 120:tmk_core/common/avr/suspend.c **** #endif
+ 121:tmk_core/common/avr/suspend.c ****   led_set(leds_off);
+ 122:tmk_core/common/avr/suspend.c **** 
+ 123:tmk_core/common/avr/suspend.c **** #ifdef AUDIO_ENABLE
+ 124:tmk_core/common/avr/suspend.c ****   // This sometimes disables the start-up noise, so it's been disabled
+ 125:tmk_core/common/avr/suspend.c ****   // stop_all_notes();
+ 126:tmk_core/common/avr/suspend.c **** #endif /* AUDIO_ENABLE */
+ 127:tmk_core/common/avr/suspend.c **** #if defined(RGBLIGHT_SLEEP) && defined(RGBLIGHT_ENABLE)
+ 128:tmk_core/common/avr/suspend.c **** #ifdef RGBLIGHT_ANIMATIONS
+ 129:tmk_core/common/avr/suspend.c ****   rgblight_timer_disable();
+ 130:tmk_core/common/avr/suspend.c **** #endif
+ 131:tmk_core/common/avr/suspend.c ****   if (!is_suspended) {
+ 132:tmk_core/common/avr/suspend.c ****     is_suspended = true;
+ 133:tmk_core/common/avr/suspend.c ****     rgblight_enabled = rgblight_config.enable;
+ 134:tmk_core/common/avr/suspend.c ****     rgblight_disable_noeeprom();
+ 135:tmk_core/common/avr/suspend.c ****   }
+ 136:tmk_core/common/avr/suspend.c **** #endif
+ 137:tmk_core/common/avr/suspend.c ****   suspend_power_down_kb();
+ 138:tmk_core/common/avr/suspend.c **** 
+ 139:tmk_core/common/avr/suspend.c ****     // TODO: more power saving
+ 140:tmk_core/common/avr/suspend.c ****     // See PicoPower application note
+ 141:tmk_core/common/avr/suspend.c ****     // - I/O port input with pullup
+ 142:tmk_core/common/avr/suspend.c ****     // - prescale clock
+ 143:tmk_core/common/avr/suspend.c ****     // - BOD disable
+ 144:tmk_core/common/avr/suspend.c ****     // - Power Reduction Register PRR
+ 145:tmk_core/common/avr/suspend.c ****     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+ 146:tmk_core/common/avr/suspend.c ****     sleep_enable();
+ 147:tmk_core/common/avr/suspend.c ****     sei();
+ 148:tmk_core/common/avr/suspend.c ****     sleep_cpu();
+ 149:tmk_core/common/avr/suspend.c ****     sleep_disable();
+ 150:tmk_core/common/avr/suspend.c **** 
+ 151:tmk_core/common/avr/suspend.c ****     // Disable watchdog after sleep
+ 152:tmk_core/common/avr/suspend.c ****     wdt_disable();
+ 153:tmk_core/common/avr/suspend.c **** }
+ 154:tmk_core/common/avr/suspend.c **** #endif
+ 155:tmk_core/common/avr/suspend.c **** 
+ 156:tmk_core/common/avr/suspend.c **** /** \brief Suspend power down
+ 157:tmk_core/common/avr/suspend.c ****  *
+ 158:tmk_core/common/avr/suspend.c ****  * FIXME: needs doc
+ 159:tmk_core/common/avr/suspend.c ****  */
+ 160:tmk_core/common/avr/suspend.c **** void suspend_power_down(void) {
+ 161:tmk_core/common/avr/suspend.c **** 	suspend_power_down_kb();
+ 162:tmk_core/common/avr/suspend.c **** 
+ 163:tmk_core/common/avr/suspend.c **** #ifndef NO_SUSPEND_POWER_DOWN
+ 164:tmk_core/common/avr/suspend.c ****     power_down(WDTO_15MS);
+ 165:tmk_core/common/avr/suspend.c **** #endif
+ 166:tmk_core/common/avr/suspend.c **** }
+ 167:tmk_core/common/avr/suspend.c **** 
+ 168:tmk_core/common/avr/suspend.c **** __attribute__ ((weak)) void matrix_power_up(void) {}
+  64               		.loc 1 168 0
+  65               		.cfi_startproc
+  66               	/* prologue: function */
+  67               	/* frame size = 0 */
+  68               	/* stack size = 0 */
+  69               	.L__stack_usage = 0
+  70               	/* epilogue start */
+  71               		.loc 1 168 0
+  72 0000 0895      		ret
+  73               		.cfi_endproc
+  74               	.LFE113:
+  76               		.set	matrix_power_up.localalias.0,matrix_power_up
+  77               		.section	.text.suspend_power_down_user,"ax",@progbits
+  78               		.weak	suspend_power_down_user
+  80               	suspend_power_down_user:
+  81               	.LFB125:
+  82               		.cfi_startproc
+  83               	/* prologue: function */
+  84               	/* frame size = 0 */
+  85               	/* stack size = 0 */
+  86               	.L__stack_usage = 0
+  87               	/* epilogue start */
+  88 0000 0895      		ret
+  89               		.cfi_endproc
+  90               	.LFE125:
+  92               		.section	.text.suspend_power_down_kb,"ax",@progbits
+  93               		.weak	suspend_power_down_kb
+  95               	suspend_power_down_kb:
+  96               	.LFB110:
+  75:tmk_core/common/avr/suspend.c ****   suspend_power_down_user();
+  97               		.loc 1 75 0
+  98               		.cfi_startproc
+  99               	/* prologue: function */
+ 100               	/* frame size = 0 */
+ 101               	/* stack size = 0 */
+ 102               	.L__stack_usage = 0
+  76:tmk_core/common/avr/suspend.c **** }
+ 103               		.loc 1 76 0
+ 104 0000 0C94 0000 		jmp suspend_power_down_user
+ 105               	.LVL2:
+ 106               		.cfi_endproc
+ 107               	.LFE110:
+ 109               		.section	.text.suspend_power_down,"ax",@progbits
+ 110               	.global	suspend_power_down
+ 112               	suspend_power_down:
+ 113               	.LFB112:
+ 160:tmk_core/common/avr/suspend.c **** 	suspend_power_down_kb();
+ 114               		.loc 1 160 0
+ 115               		.cfi_startproc
+ 116               	/* prologue: function */
+ 117               	/* frame size = 0 */
+ 118               	/* stack size = 0 */
+ 119               	.L__stack_usage = 0
+ 161:tmk_core/common/avr/suspend.c **** 
+ 120               		.loc 1 161 0
+ 121 0000 0E94 0000 		call suspend_power_down_kb
+ 122               	.LVL3:
+ 123               	.LBB11:
+ 124               	.LBB12:
+ 102:tmk_core/common/avr/suspend.c **** #endif
+ 125               		.loc 1 102 0
+ 126 0004 8091 0000 		lds r24,USB_DeviceState
+ 127 0008 8430      		cpi r24,lo8(4)
+ 128 000a 01F0      		breq .L5
+ 104:tmk_core/common/avr/suspend.c **** 
+ 129               		.loc 1 104 0
+ 130 000c 1092 0000 		sts wdt_timeout,__zero_reg__
+ 107:tmk_core/common/avr/suspend.c **** 
+ 131               		.loc 1 107 0
+ 132 0010 88E1      		ldi r24,lo8(24)
+ 133 0012 90E0      		ldi r25,0
+ 134 0014 20E4      		ldi r18,lo8(64)
+ 135               	/* #APP */
+ 136               	 ;  107 "tmk_core/common/avr/suspend.c" 1
+ 137 0016 0FB6      		in __tmp_reg__,__SREG__
+ 138 0018 F894      		cli
+ 139 001a A895      		wdr
+ 140 001c 8093 6000 		sts 96,r24
+ 141 0020 0FBE      		out __SREG__,__tmp_reg__
+ 142 0022 2093 6000 		sts 96,r18
+ 143               		
+ 144               	 ;  0 "" 2
+ 145               	.LVL4:
+ 121:tmk_core/common/avr/suspend.c **** 
+ 146               		.loc 1 121 0
+ 147               	/* #NOAPP */
+ 148 0026 80E0      		ldi r24,0
+ 149 0028 0E94 0000 		call led_set
+ 150               	.LVL5:
+ 137:tmk_core/common/avr/suspend.c **** 
+ 151               		.loc 1 137 0
+ 152 002c 0E94 0000 		call suspend_power_down_kb
+ 153               	.LVL6:
+ 145:tmk_core/common/avr/suspend.c ****     sleep_enable();
+ 154               		.loc 1 145 0
+ 155 0030 83B7      		in r24,0x33
+ 156 0032 817F      		andi r24,lo8(-15)
+ 157 0034 8460      		ori r24,lo8(4)
+ 158 0036 83BF      		out 0x33,r24
+ 146:tmk_core/common/avr/suspend.c ****     sei();
+ 159               		.loc 1 146 0
+ 160 0038 83B7      		in r24,0x33
+ 161 003a 8160      		ori r24,lo8(1)
+ 162 003c 83BF      		out 0x33,r24
+ 147:tmk_core/common/avr/suspend.c ****     sleep_cpu();
+ 163               		.loc 1 147 0
+ 164               	/* #APP */
+ 165               	 ;  147 "tmk_core/common/avr/suspend.c" 1
+ 166 003e 7894      		sei
+ 167               	 ;  0 "" 2
+ 148:tmk_core/common/avr/suspend.c ****     sleep_disable();
+ 168               		.loc 1 148 0
+ 169               	 ;  148 "tmk_core/common/avr/suspend.c" 1
+ 170 0040 8895      		sleep
+ 171               		
+ 172               	 ;  0 "" 2
+ 149:tmk_core/common/avr/suspend.c **** 
+ 173               		.loc 1 149 0
+ 174               	/* #NOAPP */
+ 175 0042 83B7      		in r24,0x33
+ 176 0044 8E7F      		andi r24,lo8(-2)
+ 177 0046 83BF      		out 0x33,r24
+ 178               	.LBB13:
+ 179               	.LBB14:
+ 180               		.file 2 "/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h"
+   1:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** /* Copyright (c) 2002, 2004 Marek Michalkiewicz
+   2:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    Copyright (c) 2005, 2006, 2007 Eric B. Weddington
+   3:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    All rights reserved.
+   4:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+   5:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    Redistribution and use in source and binary forms, with or without
+   6:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    modification, are permitted provided that the following conditions are met:
+   7:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+   8:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    * Redistributions of source code must retain the above copyright
+   9:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****      notice, this list of conditions and the following disclaimer.
+  10:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+  11:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    * Redistributions in binary form must reproduce the above copyright
+  12:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****      notice, this list of conditions and the following disclaimer in
+  13:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****      the documentation and/or other materials provided with the
+  14:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****      distribution.
+  15:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+  16:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    * Neither the name of the copyright holders nor the names of
+  17:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****      contributors may be used to endorse or promote products derived
+  18:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****      from this software without specific prior written permission.
+  19:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+  20:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  21:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  22:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  23:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  24:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  25:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  26:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  27:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  28:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  29:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  30:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****   POSSIBILITY OF SUCH DAMAGE. */
+  31:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+  32:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** /* $Id: wdt.h 2503 2016-02-07 22:59:47Z joerg_wunsch $ */
+  33:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+  34:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** /*
+  35:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    avr/wdt.h - macros for AVR watchdog timer
+  36:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****  */
+  37:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+  38:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #ifndef _AVR_WDT_H_
+  39:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #define _AVR_WDT_H_
+  40:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+  41:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #include <avr/io.h>
+  42:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #include <stdint.h>
+  43:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+  44:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** /** \file */
+  45:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** /** \defgroup avr_watchdog <avr/wdt.h>: Watchdog timer handling
+  46:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     \code #include <avr/wdt.h> \endcode
+  47:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+  48:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     This header file declares the interface to some inline macros
+  49:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     handling the watchdog timer present in many AVR devices.  In order
+  50:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     to prevent the watchdog timer configuration from being
+  51:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     accidentally altered by a crashing application, a special timed
+  52:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     sequence is required in order to change it.  The macros within
+  53:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     this header file handle the required sequence automatically
+  54:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     before changing any value.  Interrupts will be disabled during
+  55:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     the manipulation.
+  56:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+  57:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     \note Depending on the fuse configuration of the particular
+  58:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     device, further restrictions might apply, in particular it might
+  59:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     be disallowed to turn off the watchdog timer.
+  60:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+  61:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     Note that for newer devices (ATmega88 and newer, effectively any
+  62:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     AVR that has the option to also generate interrupts), the watchdog
+  63:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     timer remains active even after a system reset (except a power-on
+  64:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     condition), using the fastest prescaler value (approximately 15
+  65:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     ms).  It is therefore required to turn off the watchdog early
+  66:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     during program startup, the datasheet recommends a sequence like
+  67:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     the following:
+  68:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+  69:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     \code
+  70:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     #include <stdint.h>
+  71:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     #include <avr/wdt.h>
+  72:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+  73:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     uint8_t mcusr_mirror __attribute__ ((section (".noinit")));
+  74:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+  75:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     void get_mcusr(void) \
+  76:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       __attribute__((naked)) \
+  77:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       __attribute__((section(".init3")));
+  78:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     void get_mcusr(void)
+  79:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     {
+  80:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       mcusr_mirror = MCUSR;
+  81:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       MCUSR = 0;
+  82:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       wdt_disable();
+  83:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     }
+  84:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     \endcode
+  85:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+  86:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     Saving the value of MCUSR in \c mcusr_mirror is only needed if the
+  87:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     application later wants to examine the reset source, but in particular, 
+  88:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     clearing the watchdog reset flag before disabling the
+  89:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     watchdog is required, according to the datasheet.
+  90:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** */
+  91:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+  92:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** /**
+  93:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    \ingroup avr_watchdog
+  94:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    Reset the watchdog timer.  When the watchdog timer is enabled,
+  95:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    a call to this instruction is required before the timer expires,
+  96:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    otherwise a watchdog-initiated device reset will occur. 
+  97:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** */
+  98:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+  99:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #define wdt_reset() __asm__ __volatile__ ("wdr")
+ 100:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 101:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #ifndef __DOXYGEN__
+ 102:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 103:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #if defined(WDP3)
+ 104:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** # define _WD_PS3_MASK       _BV(WDP3)
+ 105:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #else
+ 106:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** # define _WD_PS3_MASK       0x00
+ 107:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #endif
+ 108:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 109:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #if defined(WDTCSR)
+ 110:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #  define _WD_CONTROL_REG     WDTCSR
+ 111:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #elif defined(WDTCR)
+ 112:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #  define _WD_CONTROL_REG     WDTCR
+ 113:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #else
+ 114:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #  define _WD_CONTROL_REG     WDT
+ 115:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #endif
+ 116:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 117:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #if defined(WDTOE)
+ 118:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #define _WD_CHANGE_BIT      WDTOE
+ 119:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #else
+ 120:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #define _WD_CHANGE_BIT      WDCE
+ 121:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #endif
+ 122:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 123:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #endif	/* !__DOXYGEN__ */
+ 124:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 125:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 126:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** /**
+ 127:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    \ingroup avr_watchdog
+ 128:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    Enable the watchdog timer, configuring it for expiry after
+ 129:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    \c timeout (which is a combination of the \c WDP0 through
+ 130:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    \c WDP2 bits to write into the \c WDTCR register; For those devices 
+ 131:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    that have a \c WDTCSR register, it uses the combination of the \c WDP0 
+ 132:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    through \c WDP3 bits).
+ 133:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 134:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    See also the symbolic constants \c WDTO_15MS et al.
+ 135:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** */
+ 136:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 137:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 138:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #if defined(__AVR_XMEGA__)
+ 139:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 140:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** /*
+ 141:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    wdt_enable(timeout) for xmega devices
+ 142:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** ** write signature (CCP_IOREG_gc) that enables change of protected I/O
+ 143:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    registers to the CCP register
+ 144:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** ** At the same time,
+ 145:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    1) set WDT change enable (WDT_CEN_bm)
+ 146:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    2) enable WDT (WDT_ENABLE_bm)
+ 147:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    3) set timeout (timeout)
+ 148:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** ** Synchronization starts when ENABLE bit of WDT is set. So, wait till it
+ 149:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    finishes (SYNCBUSY of STATUS register is automatically cleared after the
+ 150:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****    sync is finished).
+ 151:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** */
+ 152:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #define wdt_enable(timeout) \
+ 153:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** do { \
+ 154:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** uint8_t temp; \
+ 155:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** __asm__ __volatile__ (         \
+ 156:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "in __tmp_reg__, %[rampd]"              "\n\t" \
+ 157:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "out %[rampd], __zero_reg__"            "\n\t" \
+ 158:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "out %[ccp_reg], %[ioreg_cen_mask]"     "\n\t" \
+ 159:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "sts %[wdt_reg], %[wdt_enable_timeout]" "\n\t" \
+ 160:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "1:lds %[tmp], %[wdt_status_reg]"       "\n\t" \
+ 161:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "sbrc %[tmp], %[wdt_syncbusy_bit]"      "\n\t" \
+ 162:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "rjmp 1b"                               "\n\t" \
+ 163:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "out %[rampd], __tmp_reg__"             "\n\t" \
+ 164:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     : [tmp]                "=r" (temp) \
+ 165:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     : [rampd]              "I" (_SFR_IO_ADDR(RAMPD)),      \
+ 166:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       [ccp_reg]            "I" (_SFR_IO_ADDR(CCP)),        \
+ 167:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       [ioreg_cen_mask]     "r" ((uint8_t)CCP_IOREG_gc),     \
+ 168:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       [wdt_reg]            "n" (_SFR_MEM_ADDR(WDT_CTRL)),   \
+ 169:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       [wdt_enable_timeout] "r" ((uint8_t)(WDT_CEN_bm | WDT_ENABLE_bm | timeout)), \
+ 170:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       [wdt_status_reg]     "n" (_SFR_MEM_ADDR(WDT_STATUS)), \
+ 171:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       [wdt_syncbusy_bit]   "I" (WDT_SYNCBUSY_bm)            \
+ 172:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     : "r0" \
+ 173:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** ); \
+ 174:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** } while(0)
+ 175:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 176:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #define wdt_disable() \
+ 177:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** __asm__ __volatile__ (  \
+ 178:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "in __tmp_reg__, %[rampd]"          "\n\t" \
+ 179:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "out %[rampd], __zero_reg__"        "\n\t" \
+ 180:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "out %[ccp_reg], %[ioreg_cen_mask]" "\n\t" \
+ 181:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "sts %[wdt_reg], %[disable_mask]"   "\n\t" \
+ 182:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "out %[rampd], __tmp_reg__"         "\n\t" \
+ 183:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     : \
+ 184:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     : [rampd]             "I" (_SFR_IO_ADDR(RAMPD)),    \
+ 185:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       [ccp_reg]           "I" (_SFR_IO_ADDR(CCP)),      \
+ 186:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       [ioreg_cen_mask]    "r" ((uint8_t)CCP_IOREG_gc),   \
+ 187:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       [wdt_reg]           "n" (_SFR_MEM_ADDR(WDT_CTRL)), \
+ 188:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       [disable_mask]      "r" ((uint8_t)((~WDT_ENABLE_bm) | WDT_CEN_bm)) \
+ 189:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     : "r0" \
+ 190:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** );
+ 191:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 192:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #elif defined(__AVR_TINY__)
+ 193:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 194:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #define wdt_enable(value) \
+ 195:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** __asm__ __volatile__ ( \
+ 196:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "in __tmp_reg__,__SREG__" "\n\t"  \
+ 197:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "cli" "\n\t"  \
+ 198:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "wdr" "\n\t"  \
+ 199:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "out %[CCPADDRESS],%[SIGNATURE]" "\n\t"  \
+ 200:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "out %[WDTREG],%[WDVALUE]" "\n\t"  \
+ 201:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "out __SREG__,__tmp_reg__" "\n\t"  \
+ 202:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     : /* no outputs */  \
+ 203:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     : [CCPADDRESS] "I" (_SFR_IO_ADDR(CCP)),  \
+ 204:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       [SIGNATURE] "r" ((uint8_t)0xD8), \
+ 205:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       [WDTREG] "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)), \
+ 206:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       [WDVALUE] "r" ((uint8_t)((value & 0x08 ? _WD_PS3_MASK : 0x00) \
+ 207:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       | _BV(WDE) | (value & 0x07) )) \
+ 208:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     : "r16" \
+ 209:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** )
+ 210:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 211:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #define wdt_disable() \
+ 212:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** do { \
+ 213:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** uint8_t temp_wd; \
+ 214:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** __asm__ __volatile__ ( \
+ 215:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "in __tmp_reg__,__SREG__" "\n\t"  \
+ 216:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "cli" "\n\t"  \
+ 217:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "wdr" "\n\t"  \
+ 218:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "out %[CCPADDRESS],%[SIGNATURE]" "\n\t"  \
+ 219:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "in  %[TEMP_WD],%[WDTREG]" "\n\t" \
+ 220:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "cbr %[TEMP_WD],%[WDVALUE]" "\n\t" \
+ 221:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "out %[WDTREG],%[TEMP_WD]" "\n\t" \
+ 222:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     "out __SREG__,__tmp_reg__" "\n\t" \
+ 223:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     : /*no output */ \
+ 224:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     : [CCPADDRESS] "I" (_SFR_IO_ADDR(CCP)), \
+ 225:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       [SIGNATURE] "r" ((uint8_t)0xD8), \
+ 226:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       [WDTREG] "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)), \
+ 227:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       [TEMP_WD] "d" (temp_wd), \
+ 228:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****       [WDVALUE] "n" (1 << WDE) \
+ 229:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****     : "r16" \
+ 230:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** ); \
+ 231:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** }while(0)
+ 232:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 233:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #elif defined(CCP)
+ 234:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 235:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** static __inline__
+ 236:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** __attribute__ ((__always_inline__))
+ 237:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** void wdt_enable (const uint8_t value)
+ 238:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** {
+ 239:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	if (!_SFR_IO_REG_P (CCP) && !_SFR_IO_REG_P (_WD_CONTROL_REG))
+ 240:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	{
+ 241:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 		__asm__ __volatile__ (
+ 242:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"in __tmp_reg__,__SREG__" "\n\t"
+ 243:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"cli" "\n\t"
+ 244:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"wdr" "\n\t"
+ 245:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"sts %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 246:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"sts %[WDTREG],%[WDVALUE]" "\n\t"
+ 247:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"out __SREG__,__tmp_reg__" "\n\t"
+ 248:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			: /* no outputs */
+ 249:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			: [CCPADDRESS] "n" (_SFR_MEM_ADDR(CCP)),
+ 250:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			[SIGNATURE] "r" ((uint8_t)0xD8),
+ 251:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			[WDTREG] "n" (_SFR_MEM_ADDR(_WD_CONTROL_REG)),
+ 252:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			[WDVALUE] "r" ((uint8_t)((value & 0x08 ? _WD_PS3_MASK : 0x00)
+ 253:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				| _BV(WDE) | (value & 0x07) ))
+ 254:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			: "r0"
+ 255:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			);
+ 256:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	}
+ 257:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	else if (!_SFR_IO_REG_P (CCP) && _SFR_IO_REG_P (_WD_CONTROL_REG))
+ 258:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	{
+ 259:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 		__asm__ __volatile__ (
+ 260:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"in __tmp_reg__,__SREG__" "\n\t"
+ 261:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"cli" "\n\t"
+ 262:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"wdr" "\n\t"
+ 263:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"sts %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 264:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"out %[WDTREG],%[WDVALUE]" "\n\t"
+ 265:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"out __SREG__,__tmp_reg__" "\n\t"
+ 266:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			: /* no outputs */
+ 267:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			: [CCPADDRESS] "n" (_SFR_MEM_ADDR(CCP)),
+ 268:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			[SIGNATURE] "r" ((uint8_t)0xD8),
+ 269:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			[WDTREG] "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)),
+ 270:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			[WDVALUE] "r" ((uint8_t)((value & 0x08 ? _WD_PS3_MASK : 0x00)
+ 271:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				| _BV(WDE) | (value & 0x07) ))
+ 272:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			: "r0"
+ 273:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			);
+ 274:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	}
+ 275:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	else if (_SFR_IO_REG_P (CCP) && !_SFR_IO_REG_P (_WD_CONTROL_REG))
+ 276:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	{
+ 277:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 		__asm__ __volatile__ (
+ 278:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"in __tmp_reg__,__SREG__" "\n\t"
+ 279:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"cli" "\n\t"
+ 280:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"wdr" "\n\t"
+ 281:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"out %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 282:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"sts %[WDTREG],%[WDVALUE]" "\n\t"
+ 283:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"out __SREG__,__tmp_reg__" "\n\t"
+ 284:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			: /* no outputs */
+ 285:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			: [CCPADDRESS] "I" (_SFR_IO_ADDR(CCP)),
+ 286:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			[SIGNATURE] "r" ((uint8_t)0xD8),
+ 287:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			[WDTREG] "n" (_SFR_MEM_ADDR(_WD_CONTROL_REG)),
+ 288:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			[WDVALUE] "r" ((uint8_t)((value & 0x08 ? _WD_PS3_MASK : 0x00)
+ 289:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				| _BV(WDE) | (value & 0x07) ))
+ 290:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			: "r0"
+ 291:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			);
+ 292:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	}
+ 293:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	else
+ 294:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****  	{
+ 295:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 		__asm__ __volatile__ (
+ 296:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"in __tmp_reg__,__SREG__" "\n\t"
+ 297:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"cli" "\n\t"
+ 298:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"wdr" "\n\t"
+ 299:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"out %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 300:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"out %[WDTREG],%[WDVALUE]" "\n\t"
+ 301:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			"out __SREG__,__tmp_reg__" "\n\t"
+ 302:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			: /* no outputs */
+ 303:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			: [CCPADDRESS] "I" (_SFR_IO_ADDR(CCP)),
+ 304:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			[SIGNATURE] "r" ((uint8_t)0xD8),
+ 305:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			[WDTREG] "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)),
+ 306:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			[WDVALUE] "r" ((uint8_t)((value & 0x08 ? _WD_PS3_MASK : 0x00)
+ 307:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				| _BV(WDE) | (value & 0x07) ))
+ 308:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			: "r0"
+ 309:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 			);
+ 310:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	}
+ 311:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** }
+ 312:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 313:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** static __inline__
+ 314:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** __attribute__ ((__always_inline__))
+ 315:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** void wdt_disable (void)
+ 316:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** {
+ 317:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	if (!_SFR_IO_REG_P (CCP) && !_SFR_IO_REG_P(_WD_CONTROL_REG))
+ 318:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	{
+ 319:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****         uint8_t temp_wd;
+ 320:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****         __asm__ __volatile__ (
+ 321:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 322:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"cli" "\n\t"
+ 323:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"wdr" "\n\t"
+ 324:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"sts %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 325:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"lds %[TEMP_WD],%[WDTREG]" "\n\t"
+ 326:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"cbr %[TEMP_WD],%[WDVALUE]" "\n\t"
+ 327:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"sts %[WDTREG],%[TEMP_WD]" "\n\t"
+ 328:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"out __SREG__,__tmp_reg__" "\n\t"
+ 329:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: /*no output */
+ 330:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: [CCPADDRESS] "n" (_SFR_MEM_ADDR(CCP)),
+ 331:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				[SIGNATURE] "r" ((uint8_t)0xD8),
+ 332:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				[WDTREG] "n" (_SFR_MEM_ADDR(_WD_CONTROL_REG)),
+ 333:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				[TEMP_WD] "d" (temp_wd),
+ 334:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				[WDVALUE] "n" (1 << WDE)
+ 335:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: "r0"
+ 336:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				);
+ 337:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	}
+ 338:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	else if (!_SFR_IO_REG_P (CCP) && _SFR_IO_REG_P(_WD_CONTROL_REG))
+ 339:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	{
+ 340:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****         uint8_t temp_wd;
+ 341:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****         __asm__ __volatile__ (
+ 342:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 343:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"cli" "\n\t"
+ 344:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"wdr" "\n\t"
+ 345:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"sts %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 346:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"in %[TEMP_WD],%[WDTREG]" "\n\t"
+ 347:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"cbr %[TEMP_WD],%[WDVALUE]" "\n\t"
+ 348:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"out %[WDTREG],%[TEMP_WD]" "\n\t"
+ 349:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"out __SREG__,__tmp_reg__" "\n\t"
+ 350:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: /*no output */
+ 351:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: [CCPADDRESS] "n" (_SFR_MEM_ADDR(CCP)),
+ 352:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				[SIGNATURE] "r" ((uint8_t)0xD8),
+ 353:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				[WDTREG] "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)),
+ 354:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				[TEMP_WD] "d" (temp_wd),
+ 355:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				[WDVALUE] "n" (1 << WDE)
+ 356:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: "r0"
+ 357:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				);
+ 358:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	}
+ 359:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	else if (_SFR_IO_REG_P (CCP) && !_SFR_IO_REG_P(_WD_CONTROL_REG))
+ 360:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	{
+ 361:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****         uint8_t temp_wd;
+ 362:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****         __asm__ __volatile__ (
+ 363:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 364:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"cli" "\n\t"
+ 365:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"wdr" "\n\t"
+ 366:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"out %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 367:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"lds %[TEMP_WD],%[WDTREG]" "\n\t"
+ 368:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"cbr %[TEMP_WD],%[WDVALUE]" "\n\t"
+ 369:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"sts %[WDTREG],%[TEMP_WD]" "\n\t"
+ 370:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"out __SREG__,__tmp_reg__" "\n\t"
+ 371:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: /*no output */
+ 372:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: [CCPADDRESS] "I" (_SFR_IO_ADDR(CCP)),
+ 373:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				[SIGNATURE] "r" ((uint8_t)0xD8),
+ 374:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				[WDTREG] "n" (_SFR_MEM_ADDR(_WD_CONTROL_REG)),
+ 375:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				[TEMP_WD] "d" (temp_wd),
+ 376:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				[WDVALUE] "n" (1 << WDE)
+ 377:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: "r0"
+ 378:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				);
+ 379:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	}
+ 380:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	else
+ 381:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	{
+ 382:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****         uint8_t temp_wd;
+ 383:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****         __asm__ __volatile__ (
+ 384:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 385:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"cli" "\n\t"
+ 386:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"wdr" "\n\t"
+ 387:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"out %[CCPADDRESS],%[SIGNATURE]" "\n\t"
+ 388:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"in %[TEMP_WD],%[WDTREG]" "\n\t"
+ 389:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"cbr %[TEMP_WD],%[WDVALUE]" "\n\t"
+ 390:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"out %[WDTREG],%[TEMP_WD]" "\n\t"
+ 391:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"out __SREG__,__tmp_reg__" "\n\t"
+ 392:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: /*no output */
+ 393:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: [CCPADDRESS] "I" (_SFR_IO_ADDR(CCP)),
+ 394:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				[SIGNATURE] "r" ((uint8_t)0xD8),
+ 395:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				[WDTREG] "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)),
+ 396:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				[TEMP_WD] "d" (temp_wd),
+ 397:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				[WDVALUE] "n" (1 << WDE)
+ 398:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: "r0"
+ 399:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				);
+ 400:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	}
+ 401:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** }
+ 402:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 403:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** #else
+ 404:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 405:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** static __inline__
+ 406:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** __attribute__ ((__always_inline__))
+ 407:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** void wdt_enable (const uint8_t value)
+ 408:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** {
+ 409:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	if (_SFR_IO_REG_P (_WD_CONTROL_REG))
+ 410:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	{
+ 411:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 		__asm__ __volatile__ (
+ 412:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 413:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"cli" "\n\t"
+ 414:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"wdr" "\n\t"
+ 415:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"out %0, %1" "\n\t"
+ 416:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"out __SREG__,__tmp_reg__" "\n\t"
+ 417:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"out %0, %2" "\n \t"
+ 418:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: /* no outputs */
+ 419:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: "I" (_SFR_IO_ADDR(_WD_CONTROL_REG)),
+ 420:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"r" ((uint8_t)(_BV(_WD_CHANGE_BIT) | _BV(WDE))),
+ 421:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"r" ((uint8_t) ((value & 0x08 ? _WD_PS3_MASK : 0x00) |
+ 422:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 						_BV(WDE) | (value & 0x07)) )
+ 423:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: "r0"
+ 424:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 		);
+ 425:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	}
+ 426:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	else
+ 427:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	{
+ 428:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 		__asm__ __volatile__ (
+ 429:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"in __tmp_reg__,__SREG__" "\n\t"
+ 430:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"cli" "\n\t"
+ 431:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"wdr" "\n\t"
+ 432:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"sts %0, %1" "\n\t"
+ 433:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"out __SREG__,__tmp_reg__" "\n\t"
+ 434:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"sts %0, %2" "\n \t"
+ 435:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: /* no outputs */
+ 436:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: "n" (_SFR_MEM_ADDR(_WD_CONTROL_REG)),
+ 437:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"r" ((uint8_t)(_BV(_WD_CHANGE_BIT) | _BV(WDE))),
+ 438:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"r" ((uint8_t) ((value & 0x08 ? _WD_PS3_MASK : 0x00) |
+ 439:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 						_BV(WDE) | (value & 0x07)) )
+ 440:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: "r0"
+ 441:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 		);
+ 442:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	}
+ 443:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** }
+ 444:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 
+ 445:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** static __inline__
+ 446:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** __attribute__ ((__always_inline__))
+ 447:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** void wdt_disable (void)
+ 448:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** {
+ 449:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	if (_SFR_IO_REG_P (_WD_CONTROL_REG))
+ 450:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	{
+ 451:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****         uint8_t register temp_reg;
+ 452:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 		__asm__ __volatile__ (
+ 453:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"in __tmp_reg__,__SREG__"    "\n\t"
+ 454:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"cli"                        "\n\t"
+ 455:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"wdr"                        "\n\t"
+ 456:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"in  %[TEMPREG],%[WDTREG]"   "\n\t"
+ 457:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"ori %[TEMPREG],%[WDCE_WDE]" "\n\t"
+ 458:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"out %[WDTREG],%[TEMPREG]"   "\n\t"
+ 459:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"out %[WDTREG],__zero_reg__" "\n\t"
+ 460:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				"out __SREG__,__tmp_reg__"   "\n\t"
+ 461:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: [TEMPREG] "=d" (temp_reg)
+ 462:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: [WDTREG]  "I"  (_SFR_IO_ADDR(_WD_CONTROL_REG)),
+ 463:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				[WDCE_WDE]  "n"  ((uint8_t)(_BV(_WD_CHANGE_BIT) | _BV(WDE)))
+ 464:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 				: "r0"
+ 465:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 		);
+ 466:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	}
+ 467:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	else
+ 468:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 	{
+ 469:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h ****         uint8_t register temp_reg;
+ 470:/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h **** 		__asm__ __volatile__ (
+ 181               		.loc 2 470 0
+ 182               	/* #APP */
+ 183               	 ;  470 "/usr/local/Cellar/avr-gcc/7.2.0/avr/include/avr/wdt.h" 1
+ 184 0048 0FB6      		in __tmp_reg__,__SREG__
+ 185 004a F894      		cli
+ 186 004c A895      		wdr
+ 187 004e 8091 6000 		lds r24,96
+ 188 0052 8861      		ori r24,24
+ 189 0054 8093 6000 		sts 96,r24
+ 190 0058 1092 6000 		sts 96,__zero_reg__
+ 191 005c 0FBE      		out __SREG__,__tmp_reg__
+ 192               		
+ 193               	 ;  0 "" 2
+ 194               	.LVL7:
+ 195               	/* #NOAPP */
+ 196               	.L5:
+ 197               	/* epilogue start */
+ 198               	.LBE14:
+ 199               	.LBE13:
+ 200               	.LBE12:
+ 201               	.LBE11:
+ 166:tmk_core/common/avr/suspend.c **** 
+ 202               		.loc 1 166 0
+ 203 005e 0895      		ret
+ 204               		.cfi_endproc
+ 205               	.LFE112:
+ 207               		.section	.text.matrix_power_down,"ax",@progbits
+ 208               		.weak	matrix_power_down
+ 210               	matrix_power_down:
+ 211               	.LFB121:
+ 212               		.cfi_startproc
+ 213               	/* prologue: function */
+ 214               	/* frame size = 0 */
+ 215               	/* stack size = 0 */
+ 216               	.L__stack_usage = 0
+ 217               	/* epilogue start */
+ 218 0000 0895      		ret
+ 219               		.cfi_endproc
+ 220               	.LFE121:
+ 222               		.section	.text.suspend_wakeup_condition,"ax",@progbits
+ 223               	.global	suspend_wakeup_condition
+ 225               	suspend_wakeup_condition:
+ 226               	.LFB115:
+ 169:tmk_core/common/avr/suspend.c **** __attribute__ ((weak)) void matrix_power_down(void) {}
+ 170:tmk_core/common/avr/suspend.c **** bool suspend_wakeup_condition(void) {
+ 227               		.loc 1 170 0
+ 228               		.cfi_startproc
+ 229               		.loc 1 170 0
+ 230 0000 CF93      		push r28
+ 231               	.LCFI0:
+ 232               		.cfi_def_cfa_offset 3
+ 233               		.cfi_offset 28, -2
+ 234               	/* prologue: function */
+ 235               	/* frame size = 0 */
+ 236               	/* stack size = 1 */
+ 237               	.L__stack_usage = 1
+ 171:tmk_core/common/avr/suspend.c ****     matrix_power_up();
+ 238               		.loc 1 171 0
+ 239 0002 0E94 0000 		call matrix_power_up
+ 240               	.LVL8:
+ 172:tmk_core/common/avr/suspend.c ****     matrix_scan();
+ 241               		.loc 1 172 0
+ 242 0006 0E94 0000 		call matrix_scan
+ 243               	.LVL9:
+ 173:tmk_core/common/avr/suspend.c ****     matrix_power_down();
+ 244               		.loc 1 173 0
+ 245 000a 0E94 0000 		call matrix_power_down
+ 246               	.LVL10:
+ 247               	.LBB15:
+ 174:tmk_core/common/avr/suspend.c ****     for (uint8_t r = 0; r < MATRIX_ROWS; r++) {
+ 248               		.loc 1 174 0
+ 249 000e C0E0      		ldi r28,0
+ 250               	.LVL11:
+ 251               	.L13:
+ 175:tmk_core/common/avr/suspend.c ****         if (matrix_get_row(r)) return true;
+ 252               		.loc 1 175 0
+ 253 0010 8C2F      		mov r24,r28
+ 254 0012 0E94 0000 		call matrix_get_row
+ 255               	.LVL12:
+ 256 0016 892B      		or r24,r25
+ 257 0018 01F4      		brne .L14
+ 174:tmk_core/common/avr/suspend.c ****     for (uint8_t r = 0; r < MATRIX_ROWS; r++) {
+ 258               		.loc 1 174 0 discriminator 2
+ 259 001a CF5F      		subi r28,lo8(-(1))
+ 260               	.LVL13:
+ 261 001c C530      		cpi r28,lo8(5)
+ 262 001e 01F4      		brne .L13
+ 263               	.LBE15:
+ 176:tmk_core/common/avr/suspend.c ****     }
+ 177:tmk_core/common/avr/suspend.c ****      return false;
+ 264               		.loc 1 177 0
+ 265 0020 80E0      		ldi r24,0
+ 266               	.L11:
+ 267               	/* epilogue start */
+ 178:tmk_core/common/avr/suspend.c **** }
+ 268               		.loc 1 178 0
+ 269 0022 CF91      		pop r28
+ 270               	.LVL14:
+ 271 0024 0895      		ret
+ 272               	.LVL15:
+ 273               	.L14:
+ 274               	.LBB16:
+ 175:tmk_core/common/avr/suspend.c ****         if (matrix_get_row(r)) return true;
+ 275               		.loc 1 175 0
+ 276 0026 81E0      		ldi r24,lo8(1)
+ 277 0028 00C0      		rjmp .L11
+ 278               	.LBE16:
+ 279               		.cfi_endproc
+ 280               	.LFE115:
+ 282               		.section	.text.suspend_wakeup_init_user,"ax",@progbits
+ 283               		.weak	suspend_wakeup_init_user
+ 285               	suspend_wakeup_init_user:
+ 286               	.LFB123:
+ 287               		.cfi_startproc
+ 288               	/* prologue: function */
+ 289               	/* frame size = 0 */
+ 290               	/* stack size = 0 */
+ 291               	.L__stack_usage = 0
+ 292               	/* epilogue start */
+ 293 0000 0895      		ret
+ 294               		.cfi_endproc
+ 295               	.LFE123:
+ 297               		.section	.text.suspend_wakeup_init_kb,"ax",@progbits
+ 298               		.weak	suspend_wakeup_init_kb
+ 300               	suspend_wakeup_init_kb:
+ 301               	.LFB117:
+ 179:tmk_core/common/avr/suspend.c **** 
+ 180:tmk_core/common/avr/suspend.c **** /** \brief run user level code immediately after wakeup
+ 181:tmk_core/common/avr/suspend.c ****  *
+ 182:tmk_core/common/avr/suspend.c ****  * FIXME: needs doc
+ 183:tmk_core/common/avr/suspend.c ****  */
+ 184:tmk_core/common/avr/suspend.c **** __attribute__ ((weak))
+ 185:tmk_core/common/avr/suspend.c **** void suspend_wakeup_init_user(void) { }
+ 186:tmk_core/common/avr/suspend.c **** 
+ 187:tmk_core/common/avr/suspend.c **** /** \brief run keyboard level code immediately after wakeup
+ 188:tmk_core/common/avr/suspend.c ****  *
+ 189:tmk_core/common/avr/suspend.c ****  * FIXME: needs doc
+ 190:tmk_core/common/avr/suspend.c ****  */
+ 191:tmk_core/common/avr/suspend.c **** __attribute__ ((weak))
+ 192:tmk_core/common/avr/suspend.c **** void suspend_wakeup_init_kb(void) {
+ 302               		.loc 1 192 0
+ 303               		.cfi_startproc
+ 304               	/* prologue: function */
+ 305               	/* frame size = 0 */
+ 306               	/* stack size = 0 */
+ 307               	.L__stack_usage = 0
+ 193:tmk_core/common/avr/suspend.c ****   suspend_wakeup_init_user();
+ 308               		.loc 1 193 0
+ 309 0000 0C94 0000 		jmp suspend_wakeup_init_user
+ 310               	.LVL16:
+ 311               		.cfi_endproc
+ 312               	.LFE117:
+ 314               		.section	.text.suspend_wakeup_init,"ax",@progbits
+ 315               	.global	suspend_wakeup_init
+ 317               	suspend_wakeup_init:
+ 318               	.LFB118:
+ 194:tmk_core/common/avr/suspend.c **** }
+ 195:tmk_core/common/avr/suspend.c **** /** \brief run immediately after wakeup
+ 196:tmk_core/common/avr/suspend.c ****  *
+ 197:tmk_core/common/avr/suspend.c ****  * FIXME: needs doc
+ 198:tmk_core/common/avr/suspend.c ****  */
+ 199:tmk_core/common/avr/suspend.c **** void suspend_wakeup_init(void) {
+ 319               		.loc 1 199 0
+ 320               		.cfi_startproc
+ 321               	/* prologue: function */
+ 322               	/* frame size = 0 */
+ 323               	/* stack size = 0 */
+ 324               	.L__stack_usage = 0
+ 200:tmk_core/common/avr/suspend.c ****     // clear keyboard state
+ 201:tmk_core/common/avr/suspend.c ****     clear_keyboard();
+ 325               		.loc 1 201 0
+ 326 0000 0E94 0000 		call clear_keyboard
+ 327               	.LVL17:
+ 202:tmk_core/common/avr/suspend.c **** #ifdef BACKLIGHT_ENABLE
+ 203:tmk_core/common/avr/suspend.c ****     backlight_init();
+ 204:tmk_core/common/avr/suspend.c **** #endif
+ 205:tmk_core/common/avr/suspend.c **** 	led_set(host_keyboard_leds());
+ 328               		.loc 1 205 0
+ 329 0004 0E94 0000 		call host_keyboard_leds
+ 330               	.LVL18:
+ 331 0008 0E94 0000 		call led_set
+ 332               	.LVL19:
+ 206:tmk_core/common/avr/suspend.c **** #if defined(RGBLIGHT_SLEEP) && defined(RGBLIGHT_ENABLE)
+ 207:tmk_core/common/avr/suspend.c ****   is_suspended = false;
+ 208:tmk_core/common/avr/suspend.c ****   if (rgblight_enabled) {
+ 209:tmk_core/common/avr/suspend.c ****     #ifdef BOOTLOADER_TEENSY
+ 210:tmk_core/common/avr/suspend.c ****       wait_ms(10);
+ 211:tmk_core/common/avr/suspend.c ****     #endif
+ 212:tmk_core/common/avr/suspend.c ****     rgblight_enable_noeeprom();
+ 213:tmk_core/common/avr/suspend.c ****   }
+ 214:tmk_core/common/avr/suspend.c **** #ifdef RGBLIGHT_ANIMATIONS
+ 215:tmk_core/common/avr/suspend.c ****   rgblight_timer_enable();
+ 216:tmk_core/common/avr/suspend.c **** #endif
+ 217:tmk_core/common/avr/suspend.c **** #endif
+ 218:tmk_core/common/avr/suspend.c ****     suspend_wakeup_init_kb();
+ 333               		.loc 1 218 0
+ 334 000c 0C94 0000 		jmp suspend_wakeup_init_kb
+ 335               	.LVL20:
+ 336               		.cfi_endproc
+ 337               	.LFE118:
+ 339               		.section	.text.__vector_12,"ax",@progbits
+ 340               	.global	__vector_12
+ 342               	__vector_12:
+ 343               	.LFB119:
+ 219:tmk_core/common/avr/suspend.c **** }
+ 220:tmk_core/common/avr/suspend.c **** 
+ 221:tmk_core/common/avr/suspend.c **** #ifndef NO_SUSPEND_POWER_DOWN
+ 222:tmk_core/common/avr/suspend.c **** /* watchdog timeout */
+ 223:tmk_core/common/avr/suspend.c **** ISR(WDT_vect) {
+ 344               		.loc 1 223 0
+ 345               		.cfi_startproc
+ 346 0000 1F92      		push r1
+ 347               	.LCFI1:
+ 348               		.cfi_def_cfa_offset 3
+ 349               		.cfi_offset 1, -2
+ 350 0002 0F92      		push r0
+ 351               	.LCFI2:
+ 352               		.cfi_def_cfa_offset 4
+ 353               		.cfi_offset 0, -3
+ 354 0004 0FB6      		in r0,__SREG__
+ 355 0006 0F92      		push r0
+ 356 0008 1124      		clr __zero_reg__
+ 357 000a 8F93      		push r24
+ 358               	.LCFI3:
+ 359               		.cfi_def_cfa_offset 5
+ 360               		.cfi_offset 24, -4
+ 361 000c 9F93      		push r25
+ 362               	.LCFI4:
+ 363               		.cfi_def_cfa_offset 6
+ 364               		.cfi_offset 25, -5
+ 365 000e AF93      		push r26
+ 366               	.LCFI5:
+ 367               		.cfi_def_cfa_offset 7
+ 368               		.cfi_offset 26, -6
+ 369 0010 BF93      		push r27
+ 370               	.LCFI6:
+ 371               		.cfi_def_cfa_offset 8
+ 372               		.cfi_offset 27, -7
+ 373               	/* prologue: Signal */
+ 374               	/* frame size = 0 */
+ 375               	/* stack size = 7 */
+ 376               	.L__stack_usage = 7
+ 224:tmk_core/common/avr/suspend.c ****     // compensate timer for sleep
+ 225:tmk_core/common/avr/suspend.c ****     switch (wdt_timeout) {
+ 377               		.loc 1 225 0
+ 378 0012 8091 0000 		lds r24,wdt_timeout
+ 379 0016 8111      		cpse r24,__zero_reg__
+ 380 0018 00C0      		rjmp .L19
+ 226:tmk_core/common/avr/suspend.c ****         case WDTO_15MS:
+ 227:tmk_core/common/avr/suspend.c ****             timer_count += 15 + 2;  // WDTO_15MS + 2(from observation)
+ 381               		.loc 1 227 0
+ 382 001a 8091 0000 		lds r24,timer_count
+ 383 001e 9091 0000 		lds r25,timer_count+1
+ 384 0022 A091 0000 		lds r26,timer_count+2
+ 385 0026 B091 0000 		lds r27,timer_count+3
+ 386 002a 4196      		adiw r24,17
+ 387 002c A11D      		adc r26,__zero_reg__
+ 388 002e B11D      		adc r27,__zero_reg__
+ 389 0030 8093 0000 		sts timer_count,r24
+ 390 0034 9093 0000 		sts timer_count+1,r25
+ 391 0038 A093 0000 		sts timer_count+2,r26
+ 392 003c B093 0000 		sts timer_count+3,r27
+ 393               	.L19:
+ 394               	/* epilogue start */
+ 228:tmk_core/common/avr/suspend.c ****             break;
+ 229:tmk_core/common/avr/suspend.c ****         default:
+ 230:tmk_core/common/avr/suspend.c ****             ;
+ 231:tmk_core/common/avr/suspend.c ****     }
+ 232:tmk_core/common/avr/suspend.c **** }
+ 395               		.loc 1 232 0
+ 396 0040 BF91      		pop r27
+ 397 0042 AF91      		pop r26
+ 398 0044 9F91      		pop r25
+ 399 0046 8F91      		pop r24
+ 400 0048 0F90      		pop r0
+ 401 004a 0FBE      		out __SREG__,r0
+ 402 004c 0F90      		pop r0
+ 403 004e 1F90      		pop r1
+ 404 0050 1895      		reti
+ 405               		.cfi_endproc
+ 406               	.LFE119:
+ 408               		.section	.bss.wdt_timeout,"aw",@nobits
+ 411               	wdt_timeout:
+ 412 0000 00        		.zero	1
+ 413               		.text
+ 414               	.Letext0:
+ 415               		.file 3 "/usr/local/Cellar/avr-gcc/7.2.0/avr/include/stdint.h"
+ 416               		.file 4 "tmk_core/common/action.h"
+ 417               		.file 5 "tmk_core/common/timer.h"
+ 418               		.file 6 "tmk_core/common/report.h"
+ 419               		.file 7 "tmk_core/common/host_driver.h"
+ 420               		.file 8 "tmk_core/common/host.h"
+ 421               		.file 9 "lib/lufa/LUFA/Drivers/USB/Core/AVR8/../StdRequestType.h"
+ 422               		.file 10 "lib/lufa/LUFA/Drivers/USB/Core/AVR8/../DeviceStandardReq.h"
+ 423               		.file 11 "lib/lufa/LUFA/Drivers/USB/Core/USBTask.h"
+ 424               		.file 12 "lib/lufa/LUFA/Drivers/USB/Core/HostStandardReq.h"
+ 425               		.file 13 "/usr/local/Cellar/avr-gcc/7.2.0/avr/include/stdio.h"
+ 426               		.file 14 "tmk_core/protocol/lufa/lufa.h"
+ 427               		.file 15 "tmk_core/common/led.h"
+ 428               		.file 16 "tmk_core/common/matrix.h"
+ 429               		.file 17 "lib/lufa/LUFA/Drivers/USB/Core/AVR8/../Device.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 suspend.c
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc1FRz3X.s:2      *ABS*:000000000000003e __SP_H__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc1FRz3X.s:3      *ABS*:000000000000003d __SP_L__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc1FRz3X.s:4      *ABS*:000000000000003f __SREG__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc1FRz3X.s:5      *ABS*:0000000000000000 __tmp_reg__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc1FRz3X.s:6      *ABS*:0000000000000001 __zero_reg__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc1FRz3X.s:13     .text.suspend_idle:0000000000000000 suspend_idle
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc1FRz3X.s:62     .text.matrix_power_up:0000000000000000 matrix_power_up
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc1FRz3X.s:62     .text.matrix_power_up:0000000000000000 matrix_power_up.localalias.0
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc1FRz3X.s:80     .text.suspend_power_down_user:0000000000000000 suspend_power_down_user
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc1FRz3X.s:95     .text.suspend_power_down_kb:0000000000000000 suspend_power_down_kb
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc1FRz3X.s:112    .text.suspend_power_down:0000000000000000 suspend_power_down
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc1FRz3X.s:411    .bss.wdt_timeout:0000000000000000 wdt_timeout
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc1FRz3X.s:210    .text.matrix_power_down:0000000000000000 matrix_power_down
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc1FRz3X.s:225    .text.suspend_wakeup_condition:0000000000000000 suspend_wakeup_condition
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc1FRz3X.s:285    .text.suspend_wakeup_init_user:0000000000000000 suspend_wakeup_init_user
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc1FRz3X.s:300    .text.suspend_wakeup_init_kb:0000000000000000 suspend_wakeup_init_kb
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc1FRz3X.s:317    .text.suspend_wakeup_init:0000000000000000 suspend_wakeup_init
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc1FRz3X.s:342    .text.__vector_12:0000000000000000 __vector_12
+
+UNDEFINED SYMBOLS
+USB_DeviceState
+led_set
+matrix_scan
+matrix_get_row
+clear_keyboard
+host_keyboard_leds
+timer_count
+__do_clear_bss

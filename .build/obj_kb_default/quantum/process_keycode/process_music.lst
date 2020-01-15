@@ -1,0 +1,23 @@
+   1               		.file	"process_music.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.Letext0:
+  11               		.file 1 "tmk_core/common/report.h"
+  12               		.file 2 "c:\\msys64_2\\home\\egypt2\\qmk_utils\\avr8-gnu-toolchain\\avr\\include\\stdint.h"
+  13               		.file 3 "lib/lufa/LUFA/Drivers/USB/Core/USBTask.h"
+  14               		.file 4 "tmk_core/common/action_util.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 process_music.c
+C:\msys64_2\tmp\ccHGqOUr.s:2      *ABS*:0000003e __SP_H__
+C:\msys64_2\tmp\ccHGqOUr.s:3      *ABS*:0000003d __SP_L__
+C:\msys64_2\tmp\ccHGqOUr.s:4      *ABS*:0000003f __SREG__
+C:\msys64_2\tmp\ccHGqOUr.s:5      *ABS*:00000000 __tmp_reg__
+C:\msys64_2\tmp\ccHGqOUr.s:6      *ABS*:00000001 __zero_reg__
+
+NO UNDEFINED SYMBOLS

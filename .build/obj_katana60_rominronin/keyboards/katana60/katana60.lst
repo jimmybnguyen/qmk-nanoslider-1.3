@@ -1,0 +1,148 @@
+   1               		.file	"katana60.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.matrix_init_kb,"ax",@progbits
+  11               	.global	matrix_init_kb
+  13               	matrix_init_kb:
+  14               	.LFB18:
+  15               		.file 1 "keyboards/katana60/katana60.c"
+   1:keyboards/katana60/katana60.c **** /* Copyright 2017 Baris Tosun
+   2:keyboards/katana60/katana60.c ****  *
+   3:keyboards/katana60/katana60.c ****  * This program is free software: you can redistribute it and/or modify
+   4:keyboards/katana60/katana60.c ****  * it under the terms of the GNU General Public License as published by
+   5:keyboards/katana60/katana60.c ****  * the Free Software Foundation, either version 2 of the License, or
+   6:keyboards/katana60/katana60.c ****  * (at your option) any later version.
+   7:keyboards/katana60/katana60.c ****  *
+   8:keyboards/katana60/katana60.c ****  * This program is distributed in the hope that it will be useful,
+   9:keyboards/katana60/katana60.c ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  10:keyboards/katana60/katana60.c ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  11:keyboards/katana60/katana60.c ****  * GNU General Public License for more details.
+  12:keyboards/katana60/katana60.c ****  *
+  13:keyboards/katana60/katana60.c ****  * You should have received a copy of the GNU General Public License
+  14:keyboards/katana60/katana60.c ****  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  15:keyboards/katana60/katana60.c ****  */
+  16:keyboards/katana60/katana60.c **** #include "katana60.h"
+  17:keyboards/katana60/katana60.c **** 
+  18:keyboards/katana60/katana60.c **** void matrix_init_kb(void) {
+  16               		.loc 1 18 0
+  17               		.cfi_startproc
+  18               	/* prologue: function */
+  19               	/* frame size = 0 */
+  20               	/* stack size = 0 */
+  21               	.L__stack_usage = 0
+  19:keyboards/katana60/katana60.c **** 	// put your keyboard start-up code here
+  20:keyboards/katana60/katana60.c **** 	// runs once when the firmware starts up
+  21:keyboards/katana60/katana60.c **** 
+  22:keyboards/katana60/katana60.c **** 	matrix_init_user();
+  22               		.loc 1 22 0
+  23 0000 0C94 0000 		jmp matrix_init_user
+  24               	.LVL0:
+  25               		.cfi_endproc
+  26               	.LFE18:
+  28               		.section	.text.matrix_scan_kb,"ax",@progbits
+  29               	.global	matrix_scan_kb
+  31               	matrix_scan_kb:
+  32               	.LFB19:
+  23:keyboards/katana60/katana60.c **** }
+  24:keyboards/katana60/katana60.c **** 
+  25:keyboards/katana60/katana60.c **** void matrix_scan_kb(void) {
+  33               		.loc 1 25 0
+  34               		.cfi_startproc
+  35               	/* prologue: function */
+  36               	/* frame size = 0 */
+  37               	/* stack size = 0 */
+  38               	.L__stack_usage = 0
+  26:keyboards/katana60/katana60.c **** 	// put your looping keyboard code here
+  27:keyboards/katana60/katana60.c **** 	// runs every cycle (a lot)
+  28:keyboards/katana60/katana60.c **** 
+  29:keyboards/katana60/katana60.c **** 	matrix_scan_user();
+  39               		.loc 1 29 0
+  40 0000 0C94 0000 		jmp matrix_scan_user
+  41               	.LVL1:
+  42               		.cfi_endproc
+  43               	.LFE19:
+  45               		.section	.text.process_record_kb,"ax",@progbits
+  46               	.global	process_record_kb
+  48               	process_record_kb:
+  49               	.LFB20:
+  30:keyboards/katana60/katana60.c **** }
+  31:keyboards/katana60/katana60.c **** 
+  32:keyboards/katana60/katana60.c **** bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
+  50               		.loc 1 32 0
+  51               		.cfi_startproc
+  52               	.LVL2:
+  53               	/* prologue: function */
+  54               	/* frame size = 0 */
+  55               	/* stack size = 0 */
+  56               	.L__stack_usage = 0
+  33:keyboards/katana60/katana60.c **** 	// put your per-action keyboard code here
+  34:keyboards/katana60/katana60.c **** 	// runs for every action, just before processing by the firmware
+  35:keyboards/katana60/katana60.c **** 
+  36:keyboards/katana60/katana60.c **** 	return process_record_user(keycode, record);
+  57               		.loc 1 36 0
+  58 0000 0C94 0000 		jmp process_record_user
+  59               	.LVL3:
+  60               		.cfi_endproc
+  61               	.LFE20:
+  63               		.section	.text.led_set_kb,"ax",@progbits
+  64               	.global	led_set_kb
+  66               	led_set_kb:
+  67               	.LFB21:
+  37:keyboards/katana60/katana60.c **** }
+  38:keyboards/katana60/katana60.c **** 
+  39:keyboards/katana60/katana60.c **** void led_set_kb(uint8_t usb_led) {
+  68               		.loc 1 39 0
+  69               		.cfi_startproc
+  70               	.LVL4:
+  71               	/* prologue: function */
+  72               	/* frame size = 0 */
+  73               	/* stack size = 0 */
+  74               	.L__stack_usage = 0
+  40:keyboards/katana60/katana60.c **** 	// put your keyboard LED indicator (ex: Caps Lock LED) toggling code here
+  41:keyboards/katana60/katana60.c **** 
+  42:keyboards/katana60/katana60.c **** 	led_set_user(usb_led);
+  75               		.loc 1 42 0
+  76 0000 0C94 0000 		jmp led_set_user
+  77               	.LVL5:
+  78               		.cfi_endproc
+  79               	.LFE21:
+  81               		.text
+  82               	.Letext0:
+  83               		.file 2 "/usr/local/Cellar/avr-gcc/7.2.0/avr/include/stdint.h"
+  84               		.file 3 "/usr/local/Cellar/avr-gcc/7.2.0/lib/avr-gcc/7/gcc/avr/7.2.0/include/stddef.h"
+  85               		.file 4 "tmk_core/common/keyboard.h"
+  86               		.file 5 "tmk_core/common/action.h"
+  87               		.file 6 "tmk_core/common/report.h"
+  88               		.file 7 "tmk_core/common/host.h"
+  89               		.file 8 "tmk_core/common/avr/xprintf.h"
+  90               		.file 9 "tmk_core/common/debug.h"
+  91               		.file 10 "quantum/keycode_config.h"
+  92               		.file 11 "quantum/keymap.h"
+  93               		.file 12 "tmk_core/common/action_layer.h"
+  94               		.file 13 "tmk_core/common/timer.h"
+  95               		.file 14 "tmk_core/common/action_util.h"
+  96               		.file 15 "/usr/local/Cellar/avr-gcc/7.2.0/avr/include/stdlib.h"
+  97               		.file 16 "quantum/quantum.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 katana60.c
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccSTjK1b.s:2      *ABS*:000000000000003e __SP_H__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccSTjK1b.s:3      *ABS*:000000000000003d __SP_L__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccSTjK1b.s:4      *ABS*:000000000000003f __SREG__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccSTjK1b.s:5      *ABS*:0000000000000000 __tmp_reg__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccSTjK1b.s:6      *ABS*:0000000000000001 __zero_reg__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccSTjK1b.s:13     .text.matrix_init_kb:0000000000000000 matrix_init_kb
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccSTjK1b.s:31     .text.matrix_scan_kb:0000000000000000 matrix_scan_kb
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccSTjK1b.s:48     .text.process_record_kb:0000000000000000 process_record_kb
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccSTjK1b.s:66     .text.led_set_kb:0000000000000000 led_set_kb
+
+UNDEFINED SYMBOLS
+matrix_init_user
+matrix_scan_user
+process_record_user
+led_set_user

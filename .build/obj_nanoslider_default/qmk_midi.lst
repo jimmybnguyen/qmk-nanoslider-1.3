@@ -1,0 +1,588 @@
+   1               		.file	"qmk_midi.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.fallthrough_callback,"ax",@progbits
+  12               	fallthrough_callback:
+  13               	.LFB113:
+  14               		.file 1 "tmk_core/protocol/midi/qmk_midi.c"
+   1:tmk_core/protocol/midi/qmk_midi.c **** #include <LUFA/Drivers/USB/USB.h>
+   2:tmk_core/protocol/midi/qmk_midi.c **** #include "qmk_midi.h"
+   3:tmk_core/protocol/midi/qmk_midi.c **** #include "sysex_tools.h"
+   4:tmk_core/protocol/midi/qmk_midi.c **** #include "midi.h"
+   5:tmk_core/protocol/midi/qmk_midi.c **** #include "usb_descriptor.h"
+   6:tmk_core/protocol/midi/qmk_midi.c **** #include "process_midi.h"
+   7:tmk_core/protocol/midi/qmk_midi.c **** #if API_SYSEX_ENABLE
+   8:tmk_core/protocol/midi/qmk_midi.c **** #include "api.h"
+   9:tmk_core/protocol/midi/qmk_midi.c **** #endif
+  10:tmk_core/protocol/midi/qmk_midi.c **** 
+  11:tmk_core/protocol/midi/qmk_midi.c **** /*******************************************************************************
+  12:tmk_core/protocol/midi/qmk_midi.c ****  * MIDI
+  13:tmk_core/protocol/midi/qmk_midi.c ****  ******************************************************************************/
+  14:tmk_core/protocol/midi/qmk_midi.c **** 
+  15:tmk_core/protocol/midi/qmk_midi.c **** MidiDevice midi_device;
+  16:tmk_core/protocol/midi/qmk_midi.c **** 
+  17:tmk_core/protocol/midi/qmk_midi.c **** #define SYSEX_START_OR_CONT 0x40
+  18:tmk_core/protocol/midi/qmk_midi.c **** #define SYSEX_ENDS_IN_1 0x50
+  19:tmk_core/protocol/midi/qmk_midi.c **** #define SYSEX_ENDS_IN_2 0x60
+  20:tmk_core/protocol/midi/qmk_midi.c **** #define SYSEX_ENDS_IN_3 0x70
+  21:tmk_core/protocol/midi/qmk_midi.c **** 
+  22:tmk_core/protocol/midi/qmk_midi.c **** #define SYS_COMMON_1 0x50
+  23:tmk_core/protocol/midi/qmk_midi.c **** #define SYS_COMMON_2 0x20
+  24:tmk_core/protocol/midi/qmk_midi.c **** #define SYS_COMMON_3 0x30
+  25:tmk_core/protocol/midi/qmk_midi.c **** 
+  26:tmk_core/protocol/midi/qmk_midi.c **** static void usb_send_func(MidiDevice * device, uint16_t cnt, uint8_t byte0, uint8_t byte1, uint8_t 
+  27:tmk_core/protocol/midi/qmk_midi.c ****   MIDI_EventPacket_t event;
+  28:tmk_core/protocol/midi/qmk_midi.c ****   event.Data1 = byte0;
+  29:tmk_core/protocol/midi/qmk_midi.c ****   event.Data2 = byte1;
+  30:tmk_core/protocol/midi/qmk_midi.c ****   event.Data3 = byte2;
+  31:tmk_core/protocol/midi/qmk_midi.c **** 
+  32:tmk_core/protocol/midi/qmk_midi.c ****   uint8_t cable = 0;
+  33:tmk_core/protocol/midi/qmk_midi.c **** 
+  34:tmk_core/protocol/midi/qmk_midi.c ****   //if the length is undefined we assume it is a SYSEX message
+  35:tmk_core/protocol/midi/qmk_midi.c ****   if (midi_packet_length(byte0) == UNDEFINED) {
+  36:tmk_core/protocol/midi/qmk_midi.c ****     switch(cnt) {
+  37:tmk_core/protocol/midi/qmk_midi.c ****       case 3:
+  38:tmk_core/protocol/midi/qmk_midi.c ****         if (byte2 == SYSEX_END)
+  39:tmk_core/protocol/midi/qmk_midi.c ****           event.Event = MIDI_EVENT(cable, SYSEX_ENDS_IN_3);
+  40:tmk_core/protocol/midi/qmk_midi.c ****         else
+  41:tmk_core/protocol/midi/qmk_midi.c ****           event.Event = MIDI_EVENT(cable, SYSEX_START_OR_CONT);
+  42:tmk_core/protocol/midi/qmk_midi.c ****         break;
+  43:tmk_core/protocol/midi/qmk_midi.c ****       case 2:
+  44:tmk_core/protocol/midi/qmk_midi.c ****         if (byte1 == SYSEX_END)
+  45:tmk_core/protocol/midi/qmk_midi.c ****           event.Event = MIDI_EVENT(cable, SYSEX_ENDS_IN_2);
+  46:tmk_core/protocol/midi/qmk_midi.c ****         else
+  47:tmk_core/protocol/midi/qmk_midi.c ****           event.Event = MIDI_EVENT(cable, SYSEX_START_OR_CONT);
+  48:tmk_core/protocol/midi/qmk_midi.c ****         break;
+  49:tmk_core/protocol/midi/qmk_midi.c ****       case 1:
+  50:tmk_core/protocol/midi/qmk_midi.c ****         if (byte0 == SYSEX_END)
+  51:tmk_core/protocol/midi/qmk_midi.c ****           event.Event = MIDI_EVENT(cable, SYSEX_ENDS_IN_1);
+  52:tmk_core/protocol/midi/qmk_midi.c ****         else
+  53:tmk_core/protocol/midi/qmk_midi.c ****           event.Event = MIDI_EVENT(cable, SYSEX_START_OR_CONT);
+  54:tmk_core/protocol/midi/qmk_midi.c ****         break;
+  55:tmk_core/protocol/midi/qmk_midi.c ****       default:
+  56:tmk_core/protocol/midi/qmk_midi.c ****         return; //invalid cnt
+  57:tmk_core/protocol/midi/qmk_midi.c ****     }
+  58:tmk_core/protocol/midi/qmk_midi.c ****   } else {
+  59:tmk_core/protocol/midi/qmk_midi.c ****     //deal with 'system common' messages
+  60:tmk_core/protocol/midi/qmk_midi.c ****     //TODO are there any more?
+  61:tmk_core/protocol/midi/qmk_midi.c ****     switch(byte0 & 0xF0){
+  62:tmk_core/protocol/midi/qmk_midi.c ****       case MIDI_SONGPOSITION:
+  63:tmk_core/protocol/midi/qmk_midi.c ****         event.Event = MIDI_EVENT(cable, SYS_COMMON_3);
+  64:tmk_core/protocol/midi/qmk_midi.c ****         break;
+  65:tmk_core/protocol/midi/qmk_midi.c ****       case MIDI_SONGSELECT:
+  66:tmk_core/protocol/midi/qmk_midi.c ****       case MIDI_TC_QUARTERFRAME:
+  67:tmk_core/protocol/midi/qmk_midi.c ****         event.Event = MIDI_EVENT(cable, SYS_COMMON_2);
+  68:tmk_core/protocol/midi/qmk_midi.c ****         break;
+  69:tmk_core/protocol/midi/qmk_midi.c ****       default:
+  70:tmk_core/protocol/midi/qmk_midi.c ****         event.Event = MIDI_EVENT(cable, byte0);
+  71:tmk_core/protocol/midi/qmk_midi.c ****         break;
+  72:tmk_core/protocol/midi/qmk_midi.c ****     }
+  73:tmk_core/protocol/midi/qmk_midi.c ****   }
+  74:tmk_core/protocol/midi/qmk_midi.c **** 
+  75:tmk_core/protocol/midi/qmk_midi.c ****   send_midi_packet(&event);
+  76:tmk_core/protocol/midi/qmk_midi.c **** }
+  77:tmk_core/protocol/midi/qmk_midi.c **** 
+  78:tmk_core/protocol/midi/qmk_midi.c **** static void usb_get_midi(MidiDevice * device) {
+  79:tmk_core/protocol/midi/qmk_midi.c ****   MIDI_EventPacket_t event;
+  80:tmk_core/protocol/midi/qmk_midi.c ****   while (recv_midi_packet(&event)) {
+  81:tmk_core/protocol/midi/qmk_midi.c **** 
+  82:tmk_core/protocol/midi/qmk_midi.c ****     midi_packet_length_t length = midi_packet_length(event.Data1);
+  83:tmk_core/protocol/midi/qmk_midi.c ****     uint8_t input[3];
+  84:tmk_core/protocol/midi/qmk_midi.c ****     input[0] = event.Data1;
+  85:tmk_core/protocol/midi/qmk_midi.c ****     input[1] = event.Data2;
+  86:tmk_core/protocol/midi/qmk_midi.c ****     input[2] = event.Data3;
+  87:tmk_core/protocol/midi/qmk_midi.c ****     if (length == UNDEFINED) {
+  88:tmk_core/protocol/midi/qmk_midi.c ****       //sysex
+  89:tmk_core/protocol/midi/qmk_midi.c ****       if (event.Event == MIDI_EVENT(0, SYSEX_START_OR_CONT) || event.Event == MIDI_EVENT(0, SYSEX_E
+  90:tmk_core/protocol/midi/qmk_midi.c ****         length = 3;
+  91:tmk_core/protocol/midi/qmk_midi.c ****       } else if (event.Event == MIDI_EVENT(0, SYSEX_ENDS_IN_2)) {
+  92:tmk_core/protocol/midi/qmk_midi.c ****         length = 2;
+  93:tmk_core/protocol/midi/qmk_midi.c ****       } else if(event.Event ==  MIDI_EVENT(0, SYSEX_ENDS_IN_1)) {
+  94:tmk_core/protocol/midi/qmk_midi.c ****         length = 1;
+  95:tmk_core/protocol/midi/qmk_midi.c ****       } else {
+  96:tmk_core/protocol/midi/qmk_midi.c ****         //XXX what to do?
+  97:tmk_core/protocol/midi/qmk_midi.c ****       }
+  98:tmk_core/protocol/midi/qmk_midi.c ****     }
+  99:tmk_core/protocol/midi/qmk_midi.c **** 
+ 100:tmk_core/protocol/midi/qmk_midi.c ****     //pass the data to the device input function
+ 101:tmk_core/protocol/midi/qmk_midi.c ****     if (length != UNDEFINED)
+ 102:tmk_core/protocol/midi/qmk_midi.c ****       midi_device_input(device, length, input);
+ 103:tmk_core/protocol/midi/qmk_midi.c ****   }
+ 104:tmk_core/protocol/midi/qmk_midi.c **** }
+ 105:tmk_core/protocol/midi/qmk_midi.c **** 
+ 106:tmk_core/protocol/midi/qmk_midi.c **** static void fallthrough_callback(MidiDevice * device,
+ 107:tmk_core/protocol/midi/qmk_midi.c ****     uint16_t cnt, uint8_t byte0, uint8_t byte1, uint8_t byte2){
+  15               		.loc 1 107 0
+  16               		.cfi_startproc
+  17               	.LVL0:
+  18               	/* prologue: function */
+  19               	/* frame size = 0 */
+  20               	/* stack size = 0 */
+  21               	.L__stack_usage = 0
+  22 0000 0895      		ret
+  23               		.cfi_endproc
+  24               	.LFE113:
+  26               		.section	.text.cc_callback,"ax",@progbits
+  28               	cc_callback:
+  29               	.LFB114:
+ 108:tmk_core/protocol/midi/qmk_midi.c **** 
+ 109:tmk_core/protocol/midi/qmk_midi.c **** #ifdef AUDIO_ENABLE
+ 110:tmk_core/protocol/midi/qmk_midi.c ****   if (cnt == 3) {
+ 111:tmk_core/protocol/midi/qmk_midi.c ****     switch (byte0 & 0xF0) {
+ 112:tmk_core/protocol/midi/qmk_midi.c ****         case MIDI_NOTEON:
+ 113:tmk_core/protocol/midi/qmk_midi.c ****             play_note(((double)261.6)*pow(2.0, -4.0)*pow(2.0,(byte1 & 0x7F)/12.0), (byte2 & 0x7F) /
+ 114:tmk_core/protocol/midi/qmk_midi.c ****             break;
+ 115:tmk_core/protocol/midi/qmk_midi.c ****         case MIDI_NOTEOFF:
+ 116:tmk_core/protocol/midi/qmk_midi.c ****             stop_note(((double)261.6)*pow(2.0, -4.0)*pow(2.0,(byte1 & 0x7F)/12.0));
+ 117:tmk_core/protocol/midi/qmk_midi.c ****             break;
+ 118:tmk_core/protocol/midi/qmk_midi.c ****     }
+ 119:tmk_core/protocol/midi/qmk_midi.c ****   }
+ 120:tmk_core/protocol/midi/qmk_midi.c ****   if (byte0 == MIDI_STOP) {
+ 121:tmk_core/protocol/midi/qmk_midi.c ****     stop_all_notes();
+ 122:tmk_core/protocol/midi/qmk_midi.c ****   }
+ 123:tmk_core/protocol/midi/qmk_midi.c **** #endif
+ 124:tmk_core/protocol/midi/qmk_midi.c **** }
+ 125:tmk_core/protocol/midi/qmk_midi.c **** 
+ 126:tmk_core/protocol/midi/qmk_midi.c **** 
+ 127:tmk_core/protocol/midi/qmk_midi.c **** static void cc_callback(MidiDevice * device,
+ 128:tmk_core/protocol/midi/qmk_midi.c ****     uint8_t chan, uint8_t num, uint8_t val) {
+  30               		.loc 1 128 0
+  31               		.cfi_startproc
+  32               	.LVL1:
+  33               	/* prologue: function */
+  34               	/* frame size = 0 */
+  35               	/* stack size = 0 */
+  36               	.L__stack_usage = 0
+  37 0000 0895      		ret
+  38               		.cfi_endproc
+  39               	.LFE114:
+  41               		.section	.text.usb_get_midi,"ax",@progbits
+  43               	usb_get_midi:
+  44               	.LFB112:
+  78:tmk_core/protocol/midi/qmk_midi.c ****   MIDI_EventPacket_t event;
+  45               		.loc 1 78 0
+  46               		.cfi_startproc
+  47               	.LVL2:
+  78:tmk_core/protocol/midi/qmk_midi.c ****   MIDI_EventPacket_t event;
+  48               		.loc 1 78 0
+  49 0000 0F93      		push r16
+  50               	.LCFI0:
+  51               		.cfi_def_cfa_offset 3
+  52               		.cfi_offset 16, -2
+  53 0002 1F93      		push r17
+  54               	.LCFI1:
+  55               		.cfi_def_cfa_offset 4
+  56               		.cfi_offset 17, -3
+  57 0004 CF93      		push r28
+  58               	.LCFI2:
+  59               		.cfi_def_cfa_offset 5
+  60               		.cfi_offset 28, -4
+  61 0006 DF93      		push r29
+  62               	.LCFI3:
+  63               		.cfi_def_cfa_offset 6
+  64               		.cfi_offset 29, -5
+  65 0008 CDB7      		in r28,__SP_L__
+  66 000a DEB7      		in r29,__SP_H__
+  67               	.LCFI4:
+  68               		.cfi_def_cfa_register 28
+  69 000c 2797      		sbiw r28,7
+  70               	.LCFI5:
+  71               		.cfi_def_cfa_offset 13
+  72 000e 0FB6      		in __tmp_reg__,__SREG__
+  73 0010 F894      		cli
+  74 0012 DEBF      		out __SP_H__,r29
+  75 0014 0FBE      		out __SREG__,__tmp_reg__
+  76 0016 CDBF      		out __SP_L__,r28
+  77               	/* prologue: function */
+  78               	/* frame size = 7 */
+  79               	/* stack size = 11 */
+  80               	.L__stack_usage = 11
+  81 0018 8C01      		movw r16,r24
+  82               	.LVL3:
+  83               	.L4:
+  80:tmk_core/protocol/midi/qmk_midi.c **** 
+  84               		.loc 1 80 0
+  85 001a CE01      		movw r24,r28
+  86 001c 0196      		adiw r24,1
+  87 001e 0E94 0000 		call recv_midi_packet
+  88               	.LVL4:
+  89 0022 8823      		tst r24
+  90 0024 01F0      		breq .L14
+  91               	.LBB2:
+  82:tmk_core/protocol/midi/qmk_midi.c ****     uint8_t input[3];
+  92               		.loc 1 82 0
+  93 0026 8A81      		ldd r24,Y+2
+  94 0028 0E94 0000 		call midi_packet_length
+  95               	.LVL5:
+  84:tmk_core/protocol/midi/qmk_midi.c ****     input[1] = event.Data2;
+  96               		.loc 1 84 0
+  97 002c 9A81      		ldd r25,Y+2
+  98 002e 9D83      		std Y+5,r25
+  85:tmk_core/protocol/midi/qmk_midi.c ****     input[2] = event.Data3;
+  99               		.loc 1 85 0
+ 100 0030 9B81      		ldd r25,Y+3
+ 101 0032 9E83      		std Y+6,r25
+  86:tmk_core/protocol/midi/qmk_midi.c ****     if (length == UNDEFINED) {
+ 102               		.loc 1 86 0
+ 103 0034 9C81      		ldd r25,Y+4
+ 104 0036 9F83      		std Y+7,r25
+  87:tmk_core/protocol/midi/qmk_midi.c ****       //sysex
+ 105               		.loc 1 87 0
+ 106 0038 8111      		cpse r24,__zero_reg__
+ 107 003a 00C0      		rjmp .L5
+  89:tmk_core/protocol/midi/qmk_midi.c ****         length = 3;
+ 108               		.loc 1 89 0
+ 109 003c 8981      		ldd r24,Y+1
+ 110               	.LVL6:
+ 111 003e 8430      		cpi r24,lo8(4)
+ 112 0040 01F0      		breq .L9
+  89:tmk_core/protocol/midi/qmk_midi.c ****         length = 3;
+ 113               		.loc 1 89 0 is_stmt 0 discriminator 1
+ 114 0042 8730      		cpi r24,lo8(7)
+ 115 0044 01F0      		breq .L9
+  91:tmk_core/protocol/midi/qmk_midi.c ****         length = 2;
+ 116               		.loc 1 91 0 is_stmt 1
+ 117 0046 8630      		cpi r24,lo8(6)
+ 118 0048 01F0      		breq .L10
+  93:tmk_core/protocol/midi/qmk_midi.c ****         length = 1;
+ 119               		.loc 1 93 0
+ 120 004a 8530      		cpi r24,lo8(5)
+ 121 004c 01F4      		brne .L4
+  94:tmk_core/protocol/midi/qmk_midi.c ****       } else {
+ 122               		.loc 1 94 0
+ 123 004e 81E0      		ldi r24,lo8(1)
+ 124 0050 00C0      		rjmp .L5
+ 125               	.L9:
+  90:tmk_core/protocol/midi/qmk_midi.c ****       } else if (event.Event == MIDI_EVENT(0, SYSEX_ENDS_IN_2)) {
+ 126               		.loc 1 90 0
+ 127 0052 83E0      		ldi r24,lo8(3)
+ 128 0054 00C0      		rjmp .L5
+ 129               	.L10:
+  92:tmk_core/protocol/midi/qmk_midi.c ****       } else if(event.Event ==  MIDI_EVENT(0, SYSEX_ENDS_IN_1)) {
+ 130               		.loc 1 92 0
+ 131 0056 82E0      		ldi r24,lo8(2)
+ 132               	.L5:
+ 133               	.LVL7:
+ 102:tmk_core/protocol/midi/qmk_midi.c ****   }
+ 134               		.loc 1 102 0
+ 135 0058 AE01      		movw r20,r28
+ 136 005a 4B5F      		subi r20,-5
+ 137 005c 5F4F      		sbci r21,-1
+ 138 005e 682F      		mov r22,r24
+ 139 0060 C801      		movw r24,r16
+ 140               	.LVL8:
+ 141 0062 0E94 0000 		call midi_device_input
+ 142               	.LVL9:
+ 143 0066 00C0      		rjmp .L4
+ 144               	.L14:
+ 145               	/* epilogue start */
+ 146               	.LBE2:
+ 104:tmk_core/protocol/midi/qmk_midi.c **** 
+ 147               		.loc 1 104 0
+ 148 0068 2796      		adiw r28,7
+ 149 006a 0FB6      		in __tmp_reg__,__SREG__
+ 150 006c F894      		cli
+ 151 006e DEBF      		out __SP_H__,r29
+ 152 0070 0FBE      		out __SREG__,__tmp_reg__
+ 153 0072 CDBF      		out __SP_L__,r28
+ 154 0074 DF91      		pop r29
+ 155 0076 CF91      		pop r28
+ 156 0078 1F91      		pop r17
+ 157 007a 0F91      		pop r16
+ 158               	.LVL10:
+ 159 007c 0895      		ret
+ 160               		.cfi_endproc
+ 161               	.LFE112:
+ 163               		.section	.text.usb_send_func,"ax",@progbits
+ 165               	usb_send_func:
+ 166               	.LFB111:
+  26:tmk_core/protocol/midi/qmk_midi.c ****   MIDI_EventPacket_t event;
+ 167               		.loc 1 26 0
+ 168               		.cfi_startproc
+ 169               	.LVL11:
+ 170 0000 DF92      		push r13
+ 171               	.LCFI6:
+ 172               		.cfi_def_cfa_offset 3
+ 173               		.cfi_offset 13, -2
+ 174 0002 EF92      		push r14
+ 175               	.LCFI7:
+ 176               		.cfi_def_cfa_offset 4
+ 177               		.cfi_offset 14, -3
+ 178 0004 FF92      		push r15
+ 179               	.LCFI8:
+ 180               		.cfi_def_cfa_offset 5
+ 181               		.cfi_offset 15, -4
+ 182 0006 0F93      		push r16
+ 183               	.LCFI9:
+ 184               		.cfi_def_cfa_offset 6
+ 185               		.cfi_offset 16, -5
+ 186 0008 1F93      		push r17
+ 187               	.LCFI10:
+ 188               		.cfi_def_cfa_offset 7
+ 189               		.cfi_offset 17, -6
+ 190 000a CF93      		push r28
+ 191               	.LCFI11:
+ 192               		.cfi_def_cfa_offset 8
+ 193               		.cfi_offset 28, -7
+ 194 000c DF93      		push r29
+ 195               	.LCFI12:
+ 196               		.cfi_def_cfa_offset 9
+ 197               		.cfi_offset 29, -8
+ 198 000e 00D0      		rcall .
+ 199 0010 00D0      		rcall .
+ 200               	.LCFI13:
+ 201               		.cfi_def_cfa_offset 13
+ 202 0012 CDB7      		in r28,__SP_L__
+ 203 0014 DEB7      		in r29,__SP_H__
+ 204               	.LCFI14:
+ 205               		.cfi_def_cfa_register 28
+ 206               	/* prologue: function */
+ 207               	/* frame size = 4 */
+ 208               	/* stack size = 11 */
+ 209               	.L__stack_usage = 11
+ 210 0016 7B01      		movw r14,r22
+ 211 0018 142F      		mov r17,r20
+ 212 001a D22E      		mov r13,r18
+  28:tmk_core/protocol/midi/qmk_midi.c ****   event.Data2 = byte1;
+ 213               		.loc 1 28 0
+ 214 001c 4A83      		std Y+2,r20
+  29:tmk_core/protocol/midi/qmk_midi.c ****   event.Data3 = byte2;
+ 215               		.loc 1 29 0
+ 216 001e 2B83      		std Y+3,r18
+  30:tmk_core/protocol/midi/qmk_midi.c **** 
+ 217               		.loc 1 30 0
+ 218 0020 0C83      		std Y+4,r16
+ 219               	.LVL12:
+  35:tmk_core/protocol/midi/qmk_midi.c ****     switch(cnt) {
+ 220               		.loc 1 35 0
+ 221 0022 842F      		mov r24,r20
+ 222               	.LVL13:
+ 223 0024 0E94 0000 		call midi_packet_length
+ 224               	.LVL14:
+ 225 0028 8111      		cpse r24,__zero_reg__
+ 226 002a 00C0      		rjmp .L16
+  36:tmk_core/protocol/midi/qmk_midi.c ****       case 3:
+ 227               		.loc 1 36 0
+ 228 002c 82E0      		ldi r24,2
+ 229 002e E816      		cp r14,r24
+ 230 0030 F104      		cpc r15,__zero_reg__
+ 231 0032 01F0      		breq .L18
+ 232 0034 83E0      		ldi r24,3
+ 233 0036 E816      		cp r14,r24
+ 234 0038 F104      		cpc r15,__zero_reg__
+ 235 003a 01F0      		breq .L19
+ 236 003c EA94      		dec r14
+ 237 003e EF28      		or r14,r15
+ 238 0040 01F4      		brne .L15
+ 239 0042 00C0      		rjmp .L25
+ 240               	.L19:
+  38:tmk_core/protocol/midi/qmk_midi.c ****           event.Event = MIDI_EVENT(cable, SYSEX_ENDS_IN_3);
+ 241               		.loc 1 38 0
+ 242 0044 073F      		cpi r16,lo8(-9)
+ 243 0046 01F4      		brne .L21
+  39:tmk_core/protocol/midi/qmk_midi.c ****         else
+ 244               		.loc 1 39 0
+ 245 0048 87E0      		ldi r24,lo8(7)
+ 246 004a 00C0      		rjmp .L24
+ 247               	.L21:
+  41:tmk_core/protocol/midi/qmk_midi.c ****         break;
+ 248               		.loc 1 41 0
+ 249 004c 84E0      		ldi r24,lo8(4)
+ 250 004e 00C0      		rjmp .L24
+ 251               	.L18:
+  44:tmk_core/protocol/midi/qmk_midi.c ****           event.Event = MIDI_EVENT(cable, SYSEX_ENDS_IN_2);
+ 252               		.loc 1 44 0
+ 253 0050 87EF      		ldi r24,lo8(-9)
+ 254 0052 D812      		cpse r13,r24
+ 255 0054 00C0      		rjmp .L21
+  45:tmk_core/protocol/midi/qmk_midi.c ****         else
+ 256               		.loc 1 45 0
+ 257 0056 86E0      		ldi r24,lo8(6)
+ 258               	.L24:
+ 259 0058 8983      		std Y+1,r24
+ 260 005a 00C0      		rjmp .L22
+ 261               	.L25:
+  50:tmk_core/protocol/midi/qmk_midi.c ****           event.Event = MIDI_EVENT(cable, SYSEX_ENDS_IN_1);
+ 262               		.loc 1 50 0
+ 263 005c 173F      		cpi r17,lo8(-9)
+ 264 005e 01F4      		brne .L21
+  51:tmk_core/protocol/midi/qmk_midi.c ****         else
+ 265               		.loc 1 51 0
+ 266 0060 85E0      		ldi r24,lo8(5)
+ 267 0062 00C0      		rjmp .L24
+ 268               	.L16:
+  70:tmk_core/protocol/midi/qmk_midi.c ****         break;
+ 269               		.loc 1 70 0
+ 270 0064 1295      		swap r17
+ 271               	.LVL15:
+ 272 0066 1F70      		andi r17,lo8(15)
+ 273 0068 1983      		std Y+1,r17
+ 274               	.L22:
+  75:tmk_core/protocol/midi/qmk_midi.c **** }
+ 275               		.loc 1 75 0 discriminator 4
+ 276 006a CE01      		movw r24,r28
+ 277 006c 0196      		adiw r24,1
+ 278 006e 0E94 0000 		call send_midi_packet
+ 279               	.LVL16:
+ 280               	.L15:
+ 281               	/* epilogue start */
+  76:tmk_core/protocol/midi/qmk_midi.c **** 
+ 282               		.loc 1 76 0
+ 283 0072 0F90      		pop __tmp_reg__
+ 284 0074 0F90      		pop __tmp_reg__
+ 285 0076 0F90      		pop __tmp_reg__
+ 286 0078 0F90      		pop __tmp_reg__
+ 287 007a DF91      		pop r29
+ 288 007c CF91      		pop r28
+ 289 007e 1F91      		pop r17
+ 290 0080 0F91      		pop r16
+ 291               	.LVL17:
+ 292 0082 FF90      		pop r15
+ 293 0084 EF90      		pop r14
+ 294               	.LVL18:
+ 295 0086 DF90      		pop r13
+ 296               	.LVL19:
+ 297 0088 0895      		ret
+ 298               		.cfi_endproc
+ 299               	.LFE111:
+ 301               		.section	.text.setup_midi,"ax",@progbits
+ 302               	.global	setup_midi
+ 304               	setup_midi:
+ 305               	.LFB115:
+ 129:tmk_core/protocol/midi/qmk_midi.c ****   //sending it back on the next channel
+ 130:tmk_core/protocol/midi/qmk_midi.c ****   // midi_send_cc(device, (chan + 1) % 16, num, val);
+ 131:tmk_core/protocol/midi/qmk_midi.c **** }
+ 132:tmk_core/protocol/midi/qmk_midi.c **** 
+ 133:tmk_core/protocol/midi/qmk_midi.c **** #ifdef API_SYSEX_ENABLE
+ 134:tmk_core/protocol/midi/qmk_midi.c **** uint8_t midi_buffer[MIDI_SYSEX_BUFFER] = {0};
+ 135:tmk_core/protocol/midi/qmk_midi.c **** 
+ 136:tmk_core/protocol/midi/qmk_midi.c **** static void sysex_callback(MidiDevice * device, uint16_t start, uint8_t length, uint8_t * data) {
+ 137:tmk_core/protocol/midi/qmk_midi.c ****   // SEND_STRING("\n");
+ 138:tmk_core/protocol/midi/qmk_midi.c ****   // send_word(start);
+ 139:tmk_core/protocol/midi/qmk_midi.c ****   // SEND_STRING(": ");
+ 140:tmk_core/protocol/midi/qmk_midi.c ****   // Don't store the header
+ 141:tmk_core/protocol/midi/qmk_midi.c ****   int16_t pos = start - 4;
+ 142:tmk_core/protocol/midi/qmk_midi.c ****   for (uint8_t place = 0; place < length; place++) {
+ 143:tmk_core/protocol/midi/qmk_midi.c ****       // send_byte(*data);
+ 144:tmk_core/protocol/midi/qmk_midi.c ****       if (pos >= 0) {
+ 145:tmk_core/protocol/midi/qmk_midi.c ****           if (*data == 0xF7) {
+ 146:tmk_core/protocol/midi/qmk_midi.c ****               // SEND_STRING("\nRD: ");
+ 147:tmk_core/protocol/midi/qmk_midi.c ****               // for (uint8_t i = 0; i < start + place + 1; i++){
+ 148:tmk_core/protocol/midi/qmk_midi.c ****               //     send_byte(midi_buffer[i]);
+ 149:tmk_core/protocol/midi/qmk_midi.c ****               // SEND_STRING(" ");
+ 150:tmk_core/protocol/midi/qmk_midi.c ****               // }
+ 151:tmk_core/protocol/midi/qmk_midi.c ****               const unsigned decoded_length = sysex_decoded_length(pos);
+ 152:tmk_core/protocol/midi/qmk_midi.c ****               uint8_t decoded[API_SYSEX_MAX_SIZE];
+ 153:tmk_core/protocol/midi/qmk_midi.c ****               sysex_decode(decoded, midi_buffer, pos);
+ 154:tmk_core/protocol/midi/qmk_midi.c ****               process_api(decoded_length, decoded);
+ 155:tmk_core/protocol/midi/qmk_midi.c ****               return;
+ 156:tmk_core/protocol/midi/qmk_midi.c ****           }
+ 157:tmk_core/protocol/midi/qmk_midi.c ****           else if (pos >= MIDI_SYSEX_BUFFER) {
+ 158:tmk_core/protocol/midi/qmk_midi.c ****               return;
+ 159:tmk_core/protocol/midi/qmk_midi.c ****           }
+ 160:tmk_core/protocol/midi/qmk_midi.c ****           midi_buffer[pos] = *data;
+ 161:tmk_core/protocol/midi/qmk_midi.c ****       }
+ 162:tmk_core/protocol/midi/qmk_midi.c ****       // SEND_STRING(" ");
+ 163:tmk_core/protocol/midi/qmk_midi.c ****       data++;
+ 164:tmk_core/protocol/midi/qmk_midi.c ****       pos++;
+ 165:tmk_core/protocol/midi/qmk_midi.c ****   }
+ 166:tmk_core/protocol/midi/qmk_midi.c **** }
+ 167:tmk_core/protocol/midi/qmk_midi.c **** #endif
+ 168:tmk_core/protocol/midi/qmk_midi.c **** 
+ 169:tmk_core/protocol/midi/qmk_midi.c **** void midi_init(void);
+ 170:tmk_core/protocol/midi/qmk_midi.c **** 
+ 171:tmk_core/protocol/midi/qmk_midi.c **** void setup_midi(void)
+ 172:tmk_core/protocol/midi/qmk_midi.c **** {
+ 306               		.loc 1 172 0
+ 307               		.cfi_startproc
+ 308               	/* prologue: function */
+ 309               	/* frame size = 0 */
+ 310               	/* stack size = 0 */
+ 311               	.L__stack_usage = 0
+ 173:tmk_core/protocol/midi/qmk_midi.c **** #ifdef MIDI_ADVANCED
+ 174:tmk_core/protocol/midi/qmk_midi.c **** 	midi_init();
+ 175:tmk_core/protocol/midi/qmk_midi.c **** #endif
+ 176:tmk_core/protocol/midi/qmk_midi.c **** 	midi_device_init(&midi_device);
+ 312               		.loc 1 176 0
+ 313 0000 80E0      		ldi r24,lo8(midi_device)
+ 314 0002 90E0      		ldi r25,hi8(midi_device)
+ 315 0004 0E94 0000 		call midi_device_init
+ 316               	.LVL20:
+ 177:tmk_core/protocol/midi/qmk_midi.c ****   midi_device_set_send_func(&midi_device, usb_send_func);
+ 317               		.loc 1 177 0
+ 318 0008 60E0      		ldi r22,lo8(gs(usb_send_func))
+ 319 000a 70E0      		ldi r23,hi8(gs(usb_send_func))
+ 320 000c 80E0      		ldi r24,lo8(midi_device)
+ 321 000e 90E0      		ldi r25,hi8(midi_device)
+ 322 0010 0E94 0000 		call midi_device_set_send_func
+ 323               	.LVL21:
+ 178:tmk_core/protocol/midi/qmk_midi.c ****   midi_device_set_pre_input_process_func(&midi_device, usb_get_midi);
+ 324               		.loc 1 178 0
+ 325 0014 60E0      		ldi r22,lo8(gs(usb_get_midi))
+ 326 0016 70E0      		ldi r23,hi8(gs(usb_get_midi))
+ 327 0018 80E0      		ldi r24,lo8(midi_device)
+ 328 001a 90E0      		ldi r25,hi8(midi_device)
+ 329 001c 0E94 0000 		call midi_device_set_pre_input_process_func
+ 330               	.LVL22:
+ 179:tmk_core/protocol/midi/qmk_midi.c ****   midi_register_fallthrough_callback(&midi_device, fallthrough_callback);
+ 331               		.loc 1 179 0
+ 332 0020 60E0      		ldi r22,lo8(gs(fallthrough_callback))
+ 333 0022 70E0      		ldi r23,hi8(gs(fallthrough_callback))
+ 334 0024 80E0      		ldi r24,lo8(midi_device)
+ 335 0026 90E0      		ldi r25,hi8(midi_device)
+ 336 0028 0E94 0000 		call midi_register_fallthrough_callback
+ 337               	.LVL23:
+ 180:tmk_core/protocol/midi/qmk_midi.c ****   midi_register_cc_callback(&midi_device, cc_callback);
+ 338               		.loc 1 180 0
+ 339 002c 60E0      		ldi r22,lo8(gs(cc_callback))
+ 340 002e 70E0      		ldi r23,hi8(gs(cc_callback))
+ 341 0030 80E0      		ldi r24,lo8(midi_device)
+ 342 0032 90E0      		ldi r25,hi8(midi_device)
+ 343 0034 0C94 0000 		jmp midi_register_cc_callback
+ 344               	.LVL24:
+ 345               		.cfi_endproc
+ 346               	.LFE115:
+ 348               		.comm	midi_device,237,1
+ 349               		.text
+ 350               	.Letext0:
+ 351               		.file 2 "d:\\program files\\msys2\\home\\bnguy\\qmk_utils\\avr8-gnu-toolchain\\avr\\include\\stdin
+ 352               		.file 3 "lib/lufa/LUFA/Drivers/USB/Class/Device/../Common/MIDIClassCommon.h"
+ 353               		.file 4 "tmk_core/protocol/midi/midi_function_types.h"
+ 354               		.file 5 "tmk_core/protocol/midi/midi_device.h"
+ 355               		.file 6 "tmk_core/protocol/midi/bytequeue/bytequeue.h"
+ 356               		.file 7 "tmk_core/protocol/midi/midi.h"
+ 357               		.file 8 "tmk_core/common/report.h"
+ 358               		.file 9 "lib/lufa/LUFA/Drivers/USB/Core/USBTask.h"
+ 359               		.file 10 "tmk_core/common/action_util.h"
+ 360               		.file 11 "tmk_core/protocol/midi/qmk_midi.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 qmk_midi.c
+D:\Program Files\msys2\tmp\ccUVp1e2.s:2      *ABS*:0000003e __SP_H__
+D:\Program Files\msys2\tmp\ccUVp1e2.s:3      *ABS*:0000003d __SP_L__
+D:\Program Files\msys2\tmp\ccUVp1e2.s:4      *ABS*:0000003f __SREG__
+D:\Program Files\msys2\tmp\ccUVp1e2.s:5      *ABS*:00000000 __tmp_reg__
+D:\Program Files\msys2\tmp\ccUVp1e2.s:6      *ABS*:00000001 __zero_reg__
+D:\Program Files\msys2\tmp\ccUVp1e2.s:12     .text.fallthrough_callback:00000000 fallthrough_callback
+D:\Program Files\msys2\tmp\ccUVp1e2.s:28     .text.cc_callback:00000000 cc_callback
+D:\Program Files\msys2\tmp\ccUVp1e2.s:43     .text.usb_get_midi:00000000 usb_get_midi
+D:\Program Files\msys2\tmp\ccUVp1e2.s:165    .text.usb_send_func:00000000 usb_send_func
+D:\Program Files\msys2\tmp\ccUVp1e2.s:304    .text.setup_midi:00000000 setup_midi
+                            *COM*:000000ed midi_device
+
+UNDEFINED SYMBOLS
+recv_midi_packet
+midi_packet_length
+midi_device_input
+send_midi_packet
+midi_device_init
+midi_device_set_send_func
+midi_device_set_pre_input_process_func
+midi_register_fallthrough_callback
+midi_register_cc_callback
+__do_clear_bss

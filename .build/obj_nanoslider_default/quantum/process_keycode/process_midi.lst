@@ -1,0 +1,304 @@
+   1               		.file	"process_midi.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.midi_task,"ax",@progbits
+  11               	.global	midi_task
+  13               	midi_task:
+  14               	.LFB111:
+  15               		.file 1 "quantum/process_keycode/process_midi.c"
+   1:quantum/process_keycode/process_midi.c **** /* Copyright 2016 Jack Humbert
+   2:quantum/process_keycode/process_midi.c ****  *
+   3:quantum/process_keycode/process_midi.c ****  * This program is free software: you can redistribute it and/or modify
+   4:quantum/process_keycode/process_midi.c ****  * it under the terms of the GNU General Public License as published by
+   5:quantum/process_keycode/process_midi.c ****  * the Free Software Foundation, either version 2 of the License, or
+   6:quantum/process_keycode/process_midi.c ****  * (at your option) any later version.
+   7:quantum/process_keycode/process_midi.c ****  *
+   8:quantum/process_keycode/process_midi.c ****  * This program is distributed in the hope that it will be useful,
+   9:quantum/process_keycode/process_midi.c ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  10:quantum/process_keycode/process_midi.c ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  11:quantum/process_keycode/process_midi.c ****  * GNU General Public License for more details.
+  12:quantum/process_keycode/process_midi.c ****  *
+  13:quantum/process_keycode/process_midi.c ****  * You should have received a copy of the GNU General Public License
+  14:quantum/process_keycode/process_midi.c ****  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  15:quantum/process_keycode/process_midi.c ****  */
+  16:quantum/process_keycode/process_midi.c **** #include "process_midi.h"
+  17:quantum/process_keycode/process_midi.c **** 
+  18:quantum/process_keycode/process_midi.c **** #ifdef MIDI_ENABLE
+  19:quantum/process_keycode/process_midi.c **** #include <LUFA/Drivers/USB/USB.h>
+  20:quantum/process_keycode/process_midi.c **** #include "midi.h"
+  21:quantum/process_keycode/process_midi.c **** #include "qmk_midi.h"
+  22:quantum/process_keycode/process_midi.c **** 
+  23:quantum/process_keycode/process_midi.c **** #ifdef MIDI_BASIC
+  24:quantum/process_keycode/process_midi.c **** 
+  25:quantum/process_keycode/process_midi.c **** void process_midi_basic_noteon(uint8_t note)
+  26:quantum/process_keycode/process_midi.c **** {
+  27:quantum/process_keycode/process_midi.c ****     midi_send_noteon(&midi_device, 0, note, 128);
+  28:quantum/process_keycode/process_midi.c **** }
+  29:quantum/process_keycode/process_midi.c **** 
+  30:quantum/process_keycode/process_midi.c **** void process_midi_basic_noteoff(uint8_t note)
+  31:quantum/process_keycode/process_midi.c **** {
+  32:quantum/process_keycode/process_midi.c ****     midi_send_noteoff(&midi_device, 0, note, 0);
+  33:quantum/process_keycode/process_midi.c **** }
+  34:quantum/process_keycode/process_midi.c **** 
+  35:quantum/process_keycode/process_midi.c **** void process_midi_all_notes_off(void)
+  36:quantum/process_keycode/process_midi.c **** {
+  37:quantum/process_keycode/process_midi.c ****     midi_send_cc(&midi_device, 0, 0x7B, 0);
+  38:quantum/process_keycode/process_midi.c **** }
+  39:quantum/process_keycode/process_midi.c **** 
+  40:quantum/process_keycode/process_midi.c **** #endif // MIDI_BASIC
+  41:quantum/process_keycode/process_midi.c **** 
+  42:quantum/process_keycode/process_midi.c **** #ifdef MIDI_ADVANCED
+  43:quantum/process_keycode/process_midi.c **** 
+  44:quantum/process_keycode/process_midi.c **** #include "timer.h"
+  45:quantum/process_keycode/process_midi.c **** 
+  46:quantum/process_keycode/process_midi.c **** static uint8_t tone_status[MIDI_TONE_COUNT];
+  47:quantum/process_keycode/process_midi.c **** 
+  48:quantum/process_keycode/process_midi.c **** static uint8_t midi_modulation;
+  49:quantum/process_keycode/process_midi.c **** static int8_t midi_modulation_step;
+  50:quantum/process_keycode/process_midi.c **** static uint16_t midi_modulation_timer;
+  51:quantum/process_keycode/process_midi.c **** midi_config_t midi_config;
+  52:quantum/process_keycode/process_midi.c **** 
+  53:quantum/process_keycode/process_midi.c **** inline uint8_t compute_velocity(uint8_t setting)
+  54:quantum/process_keycode/process_midi.c **** {
+  55:quantum/process_keycode/process_midi.c ****     return (setting + 1) * (128 / (MIDI_VELOCITY_MAX - MIDI_VELOCITY_MIN + 1));
+  56:quantum/process_keycode/process_midi.c **** }
+  57:quantum/process_keycode/process_midi.c **** 
+  58:quantum/process_keycode/process_midi.c **** void midi_init(void)
+  59:quantum/process_keycode/process_midi.c **** {
+  60:quantum/process_keycode/process_midi.c ****     midi_config.octave = MI_OCT_2 - MIDI_OCTAVE_MIN;
+  61:quantum/process_keycode/process_midi.c ****     midi_config.transpose = 0;
+  62:quantum/process_keycode/process_midi.c ****     midi_config.velocity = (MIDI_VELOCITY_MAX - MIDI_VELOCITY_MIN);
+  63:quantum/process_keycode/process_midi.c ****     midi_config.channel = 0;
+  64:quantum/process_keycode/process_midi.c ****     midi_config.modulation_interval = 8;
+  65:quantum/process_keycode/process_midi.c **** 
+  66:quantum/process_keycode/process_midi.c ****     for (uint8_t i = 0; i < MIDI_TONE_COUNT; i++)
+  67:quantum/process_keycode/process_midi.c ****     {
+  68:quantum/process_keycode/process_midi.c ****         tone_status[i] = MIDI_INVALID_NOTE;
+  69:quantum/process_keycode/process_midi.c ****     }
+  70:quantum/process_keycode/process_midi.c **** 
+  71:quantum/process_keycode/process_midi.c ****     midi_modulation = 0;
+  72:quantum/process_keycode/process_midi.c ****     midi_modulation_step = 0;
+  73:quantum/process_keycode/process_midi.c ****     midi_modulation_timer = 0;
+  74:quantum/process_keycode/process_midi.c **** }
+  75:quantum/process_keycode/process_midi.c **** 
+  76:quantum/process_keycode/process_midi.c **** uint8_t midi_compute_note(uint16_t keycode)
+  77:quantum/process_keycode/process_midi.c **** {
+  78:quantum/process_keycode/process_midi.c ****     return 12 * midi_config.octave + (keycode - MIDI_TONE_MIN) + midi_config.transpose;
+  79:quantum/process_keycode/process_midi.c **** }
+  80:quantum/process_keycode/process_midi.c **** 
+  81:quantum/process_keycode/process_midi.c **** bool process_midi(uint16_t keycode, keyrecord_t *record)
+  82:quantum/process_keycode/process_midi.c **** {
+  83:quantum/process_keycode/process_midi.c ****     switch (keycode) {
+  84:quantum/process_keycode/process_midi.c ****         case MIDI_TONE_MIN ... MIDI_TONE_MAX:
+  85:quantum/process_keycode/process_midi.c ****         {
+  86:quantum/process_keycode/process_midi.c ****             uint8_t channel = midi_config.channel;
+  87:quantum/process_keycode/process_midi.c ****             uint8_t tone = keycode - MIDI_TONE_MIN;
+  88:quantum/process_keycode/process_midi.c ****             uint8_t velocity = compute_velocity(midi_config.velocity);
+  89:quantum/process_keycode/process_midi.c ****             if (record->event.pressed) {
+  90:quantum/process_keycode/process_midi.c ****                 uint8_t note = midi_compute_note(keycode);
+  91:quantum/process_keycode/process_midi.c ****                 midi_send_noteon(&midi_device, channel, note, velocity);
+  92:quantum/process_keycode/process_midi.c ****                 dprintf("midi noteon channel:%d note:%d velocity:%d\n", channel, note, velocity);
+  93:quantum/process_keycode/process_midi.c ****                 tone_status[tone] = note;
+  94:quantum/process_keycode/process_midi.c ****             }
+  95:quantum/process_keycode/process_midi.c ****             else {
+  96:quantum/process_keycode/process_midi.c ****                 uint8_t note = tone_status[tone];
+  97:quantum/process_keycode/process_midi.c ****                 if (note != MIDI_INVALID_NOTE)
+  98:quantum/process_keycode/process_midi.c ****                 {
+  99:quantum/process_keycode/process_midi.c ****                     midi_send_noteoff(&midi_device, channel, note, velocity);
+ 100:quantum/process_keycode/process_midi.c ****                     dprintf("midi noteoff channel:%d note:%d velocity:%d\n", channel, note, velocit
+ 101:quantum/process_keycode/process_midi.c ****                 }
+ 102:quantum/process_keycode/process_midi.c ****                 tone_status[tone] = MIDI_INVALID_NOTE;
+ 103:quantum/process_keycode/process_midi.c ****             }
+ 104:quantum/process_keycode/process_midi.c ****             return false;
+ 105:quantum/process_keycode/process_midi.c ****         }
+ 106:quantum/process_keycode/process_midi.c ****         case MIDI_OCTAVE_MIN ... MIDI_OCTAVE_MAX:
+ 107:quantum/process_keycode/process_midi.c ****             if (record->event.pressed) {
+ 108:quantum/process_keycode/process_midi.c ****                 midi_config.octave = keycode - MIDI_OCTAVE_MIN;
+ 109:quantum/process_keycode/process_midi.c ****                 dprintf("midi octave %d\n", midi_config.octave);
+ 110:quantum/process_keycode/process_midi.c ****             }
+ 111:quantum/process_keycode/process_midi.c ****             return false;
+ 112:quantum/process_keycode/process_midi.c ****         case MI_OCTD:
+ 113:quantum/process_keycode/process_midi.c ****             if (record->event.pressed && midi_config.octave > 0) {
+ 114:quantum/process_keycode/process_midi.c ****                 midi_config.octave--;
+ 115:quantum/process_keycode/process_midi.c ****                 dprintf("midi octave %d\n", midi_config.octave);
+ 116:quantum/process_keycode/process_midi.c ****             }
+ 117:quantum/process_keycode/process_midi.c ****             return false;
+ 118:quantum/process_keycode/process_midi.c ****         case MI_OCTU:
+ 119:quantum/process_keycode/process_midi.c ****             if (record->event.pressed && midi_config.octave < (MIDI_OCTAVE_MAX - MIDI_OCTAVE_MIN)) 
+ 120:quantum/process_keycode/process_midi.c ****                 midi_config.octave++;
+ 121:quantum/process_keycode/process_midi.c ****                 dprintf("midi octave %d\n", midi_config.octave);
+ 122:quantum/process_keycode/process_midi.c ****             }
+ 123:quantum/process_keycode/process_midi.c ****             return false;
+ 124:quantum/process_keycode/process_midi.c ****         case MIDI_TRANSPOSE_MIN ... MIDI_TRANSPOSE_MAX:
+ 125:quantum/process_keycode/process_midi.c ****             if (record->event.pressed) {
+ 126:quantum/process_keycode/process_midi.c ****                 midi_config.transpose = keycode - MI_TRNS_0;
+ 127:quantum/process_keycode/process_midi.c ****                 dprintf("midi transpose %d\n", midi_config.transpose);
+ 128:quantum/process_keycode/process_midi.c ****             }
+ 129:quantum/process_keycode/process_midi.c ****             return false;
+ 130:quantum/process_keycode/process_midi.c ****         case MI_TRNSD:
+ 131:quantum/process_keycode/process_midi.c ****             if (record->event.pressed && midi_config.transpose > (MIDI_TRANSPOSE_MIN - MI_TRNS_0)) 
+ 132:quantum/process_keycode/process_midi.c ****                 midi_config.transpose--;
+ 133:quantum/process_keycode/process_midi.c ****                 dprintf("midi transpose %d\n", midi_config.transpose);
+ 134:quantum/process_keycode/process_midi.c ****             }
+ 135:quantum/process_keycode/process_midi.c ****             return false;
+ 136:quantum/process_keycode/process_midi.c ****         case MI_TRNSU:
+ 137:quantum/process_keycode/process_midi.c ****             if (record->event.pressed && midi_config.transpose < (MIDI_TRANSPOSE_MAX - MI_TRNS_0)) 
+ 138:quantum/process_keycode/process_midi.c ****                 const bool positive = midi_config.transpose > 0;
+ 139:quantum/process_keycode/process_midi.c ****                 midi_config.transpose++;
+ 140:quantum/process_keycode/process_midi.c ****                 if (positive && midi_config.transpose < 0)
+ 141:quantum/process_keycode/process_midi.c ****                     midi_config.transpose--;
+ 142:quantum/process_keycode/process_midi.c ****                 dprintf("midi transpose %d\n", midi_config.transpose);
+ 143:quantum/process_keycode/process_midi.c ****             }
+ 144:quantum/process_keycode/process_midi.c ****             return false;
+ 145:quantum/process_keycode/process_midi.c ****         case MIDI_VELOCITY_MIN ... MIDI_VELOCITY_MAX:
+ 146:quantum/process_keycode/process_midi.c ****             if (record->event.pressed) {
+ 147:quantum/process_keycode/process_midi.c ****                 midi_config.velocity = keycode - MIDI_VELOCITY_MIN;
+ 148:quantum/process_keycode/process_midi.c ****                 dprintf("midi velocity %d\n", midi_config.velocity);
+ 149:quantum/process_keycode/process_midi.c ****             }
+ 150:quantum/process_keycode/process_midi.c ****             return false;
+ 151:quantum/process_keycode/process_midi.c ****         case MI_VELD:
+ 152:quantum/process_keycode/process_midi.c ****             if (record->event.pressed && midi_config.velocity > 0) {
+ 153:quantum/process_keycode/process_midi.c ****                 midi_config.velocity--;
+ 154:quantum/process_keycode/process_midi.c ****                 dprintf("midi velocity %d\n", midi_config.velocity);
+ 155:quantum/process_keycode/process_midi.c ****             }
+ 156:quantum/process_keycode/process_midi.c ****             return false;
+ 157:quantum/process_keycode/process_midi.c ****         case MI_VELU:
+ 158:quantum/process_keycode/process_midi.c ****             if (record->event.pressed) {
+ 159:quantum/process_keycode/process_midi.c ****                 midi_config.velocity++;
+ 160:quantum/process_keycode/process_midi.c ****                 dprintf("midi velocity %d\n", midi_config.velocity);
+ 161:quantum/process_keycode/process_midi.c ****             }
+ 162:quantum/process_keycode/process_midi.c ****             return false;
+ 163:quantum/process_keycode/process_midi.c ****         case MIDI_CHANNEL_MIN ... MIDI_CHANNEL_MAX:
+ 164:quantum/process_keycode/process_midi.c ****             if (record->event.pressed) {
+ 165:quantum/process_keycode/process_midi.c ****                 midi_config.channel = keycode - MIDI_CHANNEL_MIN;
+ 166:quantum/process_keycode/process_midi.c ****                 dprintf("midi channel %d\n", midi_config.channel);
+ 167:quantum/process_keycode/process_midi.c ****             }
+ 168:quantum/process_keycode/process_midi.c ****             return false;
+ 169:quantum/process_keycode/process_midi.c ****         case MI_CHD:
+ 170:quantum/process_keycode/process_midi.c ****             if (record->event.pressed) {
+ 171:quantum/process_keycode/process_midi.c ****                 midi_config.channel--;
+ 172:quantum/process_keycode/process_midi.c ****                 dprintf("midi channel %d\n", midi_config.channel);
+ 173:quantum/process_keycode/process_midi.c ****             }
+ 174:quantum/process_keycode/process_midi.c ****             return false;
+ 175:quantum/process_keycode/process_midi.c ****         case MI_CHU:
+ 176:quantum/process_keycode/process_midi.c ****             if (record->event.pressed) {
+ 177:quantum/process_keycode/process_midi.c ****                 midi_config.channel++;
+ 178:quantum/process_keycode/process_midi.c ****                 dprintf("midi channel %d\n", midi_config.channel);
+ 179:quantum/process_keycode/process_midi.c ****             }
+ 180:quantum/process_keycode/process_midi.c ****             return false;
+ 181:quantum/process_keycode/process_midi.c ****         case MI_ALLOFF:
+ 182:quantum/process_keycode/process_midi.c ****             if (record->event.pressed) {
+ 183:quantum/process_keycode/process_midi.c ****                 midi_send_cc(&midi_device, midi_config.channel, 0x7B, 0);
+ 184:quantum/process_keycode/process_midi.c ****                 dprintf("midi all notes off\n");
+ 185:quantum/process_keycode/process_midi.c ****             }
+ 186:quantum/process_keycode/process_midi.c ****             return false;
+ 187:quantum/process_keycode/process_midi.c ****         case MI_SUS:
+ 188:quantum/process_keycode/process_midi.c ****             midi_send_cc(&midi_device, midi_config.channel, 0x40, record->event.pressed ? 127 : 0);
+ 189:quantum/process_keycode/process_midi.c ****             dprintf("midi sustain %d\n", record->event.pressed);
+ 190:quantum/process_keycode/process_midi.c ****             return false;
+ 191:quantum/process_keycode/process_midi.c ****         case MI_PORT:
+ 192:quantum/process_keycode/process_midi.c ****             midi_send_cc(&midi_device, midi_config.channel, 0x41, record->event.pressed ? 127 : 0);
+ 193:quantum/process_keycode/process_midi.c ****             dprintf("midi portamento %d\n", record->event.pressed);
+ 194:quantum/process_keycode/process_midi.c ****             return false;
+ 195:quantum/process_keycode/process_midi.c ****         case MI_SOST:
+ 196:quantum/process_keycode/process_midi.c ****             midi_send_cc(&midi_device, midi_config.channel, 0x42, record->event.pressed ? 127 : 0);
+ 197:quantum/process_keycode/process_midi.c ****             dprintf("midi sostenuto %d\n", record->event.pressed);
+ 198:quantum/process_keycode/process_midi.c ****             return false;
+ 199:quantum/process_keycode/process_midi.c ****         case MI_SOFT:
+ 200:quantum/process_keycode/process_midi.c ****             midi_send_cc(&midi_device, midi_config.channel, 0x43, record->event.pressed ? 127 : 0);
+ 201:quantum/process_keycode/process_midi.c ****             dprintf("midi soft %d\n", record->event.pressed);
+ 202:quantum/process_keycode/process_midi.c ****             return false;
+ 203:quantum/process_keycode/process_midi.c ****         case MI_LEG:
+ 204:quantum/process_keycode/process_midi.c ****             midi_send_cc(&midi_device, midi_config.channel, 0x43, record->event.pressed ? 127 : 0);
+ 205:quantum/process_keycode/process_midi.c ****             dprintf("midi legato %d\n", record->event.pressed);
+ 206:quantum/process_keycode/process_midi.c ****             return false;
+ 207:quantum/process_keycode/process_midi.c ****         case MI_MOD:
+ 208:quantum/process_keycode/process_midi.c ****             midi_modulation_step = record->event.pressed ? 1 : -1;
+ 209:quantum/process_keycode/process_midi.c ****             return false;
+ 210:quantum/process_keycode/process_midi.c ****         case MI_MODSD:
+ 211:quantum/process_keycode/process_midi.c ****             if (record->event.pressed) {
+ 212:quantum/process_keycode/process_midi.c ****                 midi_config.modulation_interval++;
+ 213:quantum/process_keycode/process_midi.c ****                 // prevent overflow
+ 214:quantum/process_keycode/process_midi.c ****                 if (midi_config.modulation_interval == 0)
+ 215:quantum/process_keycode/process_midi.c ****                     midi_config.modulation_interval--;
+ 216:quantum/process_keycode/process_midi.c ****                 dprintf("midi modulation interval %d\n", midi_config.modulation_interval);
+ 217:quantum/process_keycode/process_midi.c ****             }
+ 218:quantum/process_keycode/process_midi.c ****             return false;
+ 219:quantum/process_keycode/process_midi.c ****         case MI_MODSU:
+ 220:quantum/process_keycode/process_midi.c ****             if (record->event.pressed && midi_config.modulation_interval > 0) {
+ 221:quantum/process_keycode/process_midi.c ****                 midi_config.modulation_interval--;
+ 222:quantum/process_keycode/process_midi.c ****                 dprintf("midi modulation interval %d\n", midi_config.modulation_interval);
+ 223:quantum/process_keycode/process_midi.c ****             }
+ 224:quantum/process_keycode/process_midi.c ****             return false;
+ 225:quantum/process_keycode/process_midi.c ****         case MI_BENDD:
+ 226:quantum/process_keycode/process_midi.c ****             if (record->event.pressed) {
+ 227:quantum/process_keycode/process_midi.c ****                 midi_send_pitchbend(&midi_device, midi_config.channel, -0x2000);
+ 228:quantum/process_keycode/process_midi.c ****                 dprintf("midi pitchbend channel:%d amount:%d\n", midi_config.channel, -0x2000);
+ 229:quantum/process_keycode/process_midi.c ****             }
+ 230:quantum/process_keycode/process_midi.c ****             else {
+ 231:quantum/process_keycode/process_midi.c ****                 midi_send_pitchbend(&midi_device, midi_config.channel, 0);
+ 232:quantum/process_keycode/process_midi.c ****                 dprintf("midi pitchbend channel:%d amount:%d\n", midi_config.channel, 0);
+ 233:quantum/process_keycode/process_midi.c ****             }
+ 234:quantum/process_keycode/process_midi.c ****             return false;
+ 235:quantum/process_keycode/process_midi.c ****         case MI_BENDU:
+ 236:quantum/process_keycode/process_midi.c ****             if (record->event.pressed) {
+ 237:quantum/process_keycode/process_midi.c ****                 midi_send_pitchbend(&midi_device, midi_config.channel, 0x1fff);
+ 238:quantum/process_keycode/process_midi.c ****                 dprintf("midi pitchbend channel:%d amount:%d\n", midi_config.channel, 0x1fff);
+ 239:quantum/process_keycode/process_midi.c ****             }
+ 240:quantum/process_keycode/process_midi.c ****             else {
+ 241:quantum/process_keycode/process_midi.c ****                 midi_send_pitchbend(&midi_device, midi_config.channel, 0);
+ 242:quantum/process_keycode/process_midi.c ****                 dprintf("midi pitchbend channel:%d amount:%d\n", midi_config.channel, 0);
+ 243:quantum/process_keycode/process_midi.c ****             }
+ 244:quantum/process_keycode/process_midi.c ****             return false;
+ 245:quantum/process_keycode/process_midi.c ****     };
+ 246:quantum/process_keycode/process_midi.c **** 
+ 247:quantum/process_keycode/process_midi.c ****     return true;
+ 248:quantum/process_keycode/process_midi.c **** }
+ 249:quantum/process_keycode/process_midi.c **** 
+ 250:quantum/process_keycode/process_midi.c **** #endif // MIDI_ADVANCED
+ 251:quantum/process_keycode/process_midi.c **** 
+ 252:quantum/process_keycode/process_midi.c **** void midi_task(void)
+ 253:quantum/process_keycode/process_midi.c **** {
+  16               		.loc 1 253 0
+  17               		.cfi_startproc
+  18               	/* prologue: function */
+  19               	/* frame size = 0 */
+  20               	/* stack size = 0 */
+  21               	.L__stack_usage = 0
+ 254:quantum/process_keycode/process_midi.c ****     midi_device_process(&midi_device);
+  22               		.loc 1 254 0
+  23 0000 80E0      		ldi r24,lo8(midi_device)
+  24 0002 90E0      		ldi r25,hi8(midi_device)
+  25 0004 0C94 0000 		jmp midi_device_process
+  26               	.LVL0:
+  27               		.cfi_endproc
+  28               	.LFE111:
+  30               		.text
+  31               	.Letext0:
+  32               		.file 2 "d:\\program files\\msys2\\home\\bnguy\\qmk_utils\\avr8-gnu-toolchain\\avr\\include\\stdin
+  33               		.file 3 "tmk_core/common/report.h"
+  34               		.file 4 "tmk_core/protocol/midi/midi_function_types.h"
+  35               		.file 5 "tmk_core/protocol/midi/midi_device.h"
+  36               		.file 6 "tmk_core/protocol/midi/bytequeue/bytequeue.h"
+  37               		.file 7 "lib/lufa/LUFA/Drivers/USB/Core/USBTask.h"
+  38               		.file 8 "tmk_core/common/action_util.h"
+  39               		.file 9 "tmk_core/protocol/midi/qmk_midi.h"
+  40               		.file 10 "tmk_core/protocol/midi/midi.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 process_midi.c
+D:\Program Files\msys2\tmp\ccyHFTZQ.s:2      *ABS*:0000003e __SP_H__
+D:\Program Files\msys2\tmp\ccyHFTZQ.s:3      *ABS*:0000003d __SP_L__
+D:\Program Files\msys2\tmp\ccyHFTZQ.s:4      *ABS*:0000003f __SREG__
+D:\Program Files\msys2\tmp\ccyHFTZQ.s:5      *ABS*:00000000 __tmp_reg__
+D:\Program Files\msys2\tmp\ccyHFTZQ.s:6      *ABS*:00000001 __zero_reg__
+D:\Program Files\msys2\tmp\ccyHFTZQ.s:13     .text.midi_task:00000000 midi_task
+
+UNDEFINED SYMBOLS
+midi_device
+midi_device_process

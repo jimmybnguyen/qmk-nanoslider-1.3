@@ -1,0 +1,202 @@
+   1               		.file	"outputselect.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.set_output_user,"ax",@progbits
+  11               		.weak	set_output_user
+  13               	set_output_user:
+  14               	.LFB106:
+  15               		.file 1 "tmk_core/protocol/lufa/outputselect.c"
+   1:tmk_core/protocol/lufa/outputselect.c **** /*
+   2:tmk_core/protocol/lufa/outputselect.c **** Copyright 2017 Priyadi Iman Nurcahyo
+   3:tmk_core/protocol/lufa/outputselect.c **** This program is free software: you can redistribute it and/or modify
+   4:tmk_core/protocol/lufa/outputselect.c **** it under the terms of the GNU General Public License as published by
+   5:tmk_core/protocol/lufa/outputselect.c **** the Free Software Foundation, either version 2 of the License, or
+   6:tmk_core/protocol/lufa/outputselect.c **** (at your option) any later version.
+   7:tmk_core/protocol/lufa/outputselect.c **** This program is distributed in the hope that it will be useful,
+   8:tmk_core/protocol/lufa/outputselect.c **** but WITHOUT ANY WARRANTY; without even the implied warranty of
+   9:tmk_core/protocol/lufa/outputselect.c **** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  10:tmk_core/protocol/lufa/outputselect.c **** GNU General Public License for more details.
+  11:tmk_core/protocol/lufa/outputselect.c **** You should have received a copy of the GNU General Public License
+  12:tmk_core/protocol/lufa/outputselect.c **** along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  13:tmk_core/protocol/lufa/outputselect.c **** */
+  14:tmk_core/protocol/lufa/outputselect.c **** 
+  15:tmk_core/protocol/lufa/outputselect.c **** #include "lufa.h"
+  16:tmk_core/protocol/lufa/outputselect.c **** #include "outputselect.h"
+  17:tmk_core/protocol/lufa/outputselect.c **** #ifdef MODULE_ADAFRUIT_BLE
+  18:tmk_core/protocol/lufa/outputselect.c ****     #include "adafruit_ble.h"
+  19:tmk_core/protocol/lufa/outputselect.c **** #endif
+  20:tmk_core/protocol/lufa/outputselect.c **** 
+  21:tmk_core/protocol/lufa/outputselect.c **** uint8_t desired_output = OUTPUT_DEFAULT;
+  22:tmk_core/protocol/lufa/outputselect.c **** 
+  23:tmk_core/protocol/lufa/outputselect.c **** /** \brief Set Output
+  24:tmk_core/protocol/lufa/outputselect.c ****  *
+  25:tmk_core/protocol/lufa/outputselect.c ****  * FIXME: Needs doc
+  26:tmk_core/protocol/lufa/outputselect.c ****  */
+  27:tmk_core/protocol/lufa/outputselect.c **** void set_output(uint8_t output) {
+  28:tmk_core/protocol/lufa/outputselect.c ****     set_output_user(output);
+  29:tmk_core/protocol/lufa/outputselect.c ****     desired_output = output;
+  30:tmk_core/protocol/lufa/outputselect.c **** }
+  31:tmk_core/protocol/lufa/outputselect.c **** 
+  32:tmk_core/protocol/lufa/outputselect.c **** /** \brief Set Output User
+  33:tmk_core/protocol/lufa/outputselect.c ****  *
+  34:tmk_core/protocol/lufa/outputselect.c ****  * FIXME: Needs doc
+  35:tmk_core/protocol/lufa/outputselect.c ****  */
+  36:tmk_core/protocol/lufa/outputselect.c **** __attribute__((weak))
+  37:tmk_core/protocol/lufa/outputselect.c **** void set_output_user(uint8_t output) {
+  16               		.loc 1 37 0
+  17               		.cfi_startproc
+  18               	.LVL0:
+  19               	/* prologue: function */
+  20               	/* frame size = 0 */
+  21               	/* stack size = 0 */
+  22               	.L__stack_usage = 0
+  23 0000 0895      		ret
+  24               		.cfi_endproc
+  25               	.LFE106:
+  27               		.section	.text.set_output,"ax",@progbits
+  28               	.global	set_output
+  30               	set_output:
+  31               	.LFB105:
+  27:tmk_core/protocol/lufa/outputselect.c ****     set_output_user(output);
+  32               		.loc 1 27 0
+  33               		.cfi_startproc
+  34               	.LVL1:
+  27:tmk_core/protocol/lufa/outputselect.c ****     set_output_user(output);
+  35               		.loc 1 27 0
+  36 0000 CF93      		push r28
+  37               	.LCFI0:
+  38               		.cfi_def_cfa_offset 3
+  39               		.cfi_offset 28, -2
+  40               	/* prologue: function */
+  41               	/* frame size = 0 */
+  42               	/* stack size = 1 */
+  43               	.L__stack_usage = 1
+  44 0002 C82F      		mov r28,r24
+  28:tmk_core/protocol/lufa/outputselect.c ****     desired_output = output;
+  45               		.loc 1 28 0
+  46 0004 0E94 0000 		call set_output_user
+  47               	.LVL2:
+  29:tmk_core/protocol/lufa/outputselect.c **** }
+  48               		.loc 1 29 0
+  49 0008 C093 0000 		sts desired_output,r28
+  50               	/* epilogue start */
+  30:tmk_core/protocol/lufa/outputselect.c **** 
+  51               		.loc 1 30 0
+  52 000c CF91      		pop r28
+  53               	.LVL3:
+  54 000e 0895      		ret
+  55               		.cfi_endproc
+  56               	.LFE105:
+  58               		.section	.text.auto_detect_output,"ax",@progbits
+  59               	.global	auto_detect_output
+  61               	auto_detect_output:
+  62               	.LFB107:
+  38:tmk_core/protocol/lufa/outputselect.c **** }
+  39:tmk_core/protocol/lufa/outputselect.c **** 
+  40:tmk_core/protocol/lufa/outputselect.c **** /** \brief Auto Detect Output
+  41:tmk_core/protocol/lufa/outputselect.c ****  *
+  42:tmk_core/protocol/lufa/outputselect.c ****  * FIXME: Needs doc
+  43:tmk_core/protocol/lufa/outputselect.c ****  */
+  44:tmk_core/protocol/lufa/outputselect.c **** uint8_t auto_detect_output(void) {
+  63               		.loc 1 44 0
+  64               		.cfi_startproc
+  65               	/* prologue: function */
+  66               	/* frame size = 0 */
+  67               	/* stack size = 0 */
+  68               	.L__stack_usage = 0
+  45:tmk_core/protocol/lufa/outputselect.c ****     if (USB_DeviceState == DEVICE_STATE_Configured) {
+  69               		.loc 1 45 0
+  70 0000 8091 0000 		lds r24,USB_DeviceState
+  71 0004 8430      		cpi r24,lo8(4)
+  72 0006 01F0      		breq .L5
+  46:tmk_core/protocol/lufa/outputselect.c ****         return OUTPUT_USB;
+  47:tmk_core/protocol/lufa/outputselect.c ****     }
+  48:tmk_core/protocol/lufa/outputselect.c **** 
+  49:tmk_core/protocol/lufa/outputselect.c **** #ifdef MODULE_ADAFRUIT_BLE
+  50:tmk_core/protocol/lufa/outputselect.c ****     if (adafruit_ble_is_connected()) {
+  51:tmk_core/protocol/lufa/outputselect.c ****         return OUTPUT_BLUETOOTH;
+  52:tmk_core/protocol/lufa/outputselect.c ****     }
+  53:tmk_core/protocol/lufa/outputselect.c **** #endif
+  54:tmk_core/protocol/lufa/outputselect.c **** 
+  55:tmk_core/protocol/lufa/outputselect.c **** #ifdef BLUETOOTH_ENABLE
+  56:tmk_core/protocol/lufa/outputselect.c ****     return OUTPUT_BLUETOOTH; // should check if BT is connected here
+  57:tmk_core/protocol/lufa/outputselect.c **** #endif
+  58:tmk_core/protocol/lufa/outputselect.c **** 
+  59:tmk_core/protocol/lufa/outputselect.c ****     return OUTPUT_NONE;
+  73               		.loc 1 59 0
+  74 0008 81E0      		ldi r24,lo8(1)
+  75 000a 0895      		ret
+  76               	.L5:
+  46:tmk_core/protocol/lufa/outputselect.c ****         return OUTPUT_USB;
+  77               		.loc 1 46 0
+  78 000c 82E0      		ldi r24,lo8(2)
+  60:tmk_core/protocol/lufa/outputselect.c **** }
+  79               		.loc 1 60 0
+  80 000e 0895      		ret
+  81               		.cfi_endproc
+  82               	.LFE107:
+  84               		.section	.text.where_to_send,"ax",@progbits
+  85               	.global	where_to_send
+  87               	where_to_send:
+  88               	.LFB108:
+  61:tmk_core/protocol/lufa/outputselect.c **** 
+  62:tmk_core/protocol/lufa/outputselect.c **** /** \brief Where To Send
+  63:tmk_core/protocol/lufa/outputselect.c ****  *
+  64:tmk_core/protocol/lufa/outputselect.c ****  * FIXME: Needs doc
+  65:tmk_core/protocol/lufa/outputselect.c ****  */
+  66:tmk_core/protocol/lufa/outputselect.c **** uint8_t where_to_send(void) {
+  89               		.loc 1 66 0
+  90               		.cfi_startproc
+  91               	/* prologue: function */
+  92               	/* frame size = 0 */
+  93               	/* stack size = 0 */
+  94               	.L__stack_usage = 0
+  67:tmk_core/protocol/lufa/outputselect.c ****     if (desired_output == OUTPUT_AUTO) {
+  95               		.loc 1 67 0
+  96 0000 8091 0000 		lds r24,desired_output
+  97 0004 8111      		cpse r24,__zero_reg__
+  98 0006 00C0      		rjmp .L8
+  68:tmk_core/protocol/lufa/outputselect.c ****         return auto_detect_output();
+  99               		.loc 1 68 0
+ 100 0008 0C94 0000 		jmp auto_detect_output
+ 101               	.LVL4:
+ 102               	.L8:
+  69:tmk_core/protocol/lufa/outputselect.c ****     }
+  70:tmk_core/protocol/lufa/outputselect.c ****     return desired_output;
+  71:tmk_core/protocol/lufa/outputselect.c **** }
+ 103               		.loc 1 71 0
+ 104 000c 0895      		ret
+ 105               		.cfi_endproc
+ 106               	.LFE108:
+ 108               	.global	desired_output
+ 109               		.section	.bss.desired_output,"aw",@nobits
+ 112               	desired_output:
+ 113 0000 00        		.zero	1
+ 114               		.text
+ 115               	.Letext0:
+ 116               		.file 2 "lib/lufa/LUFA/Drivers/USB/Core/AVR8/../Device.h"
+ 117               		.file 3 "tmk_core/protocol/lufa/outputselect.h"
+ 118               		.file 4 "lib/lufa/LUFA/Drivers/USB/Core/USBTask.h"
+ 119               		.file 5 "c:\\msys64_2\\home\\egypt2\\qmk_utils\\avr8-gnu-toolchain\\avr\\include\\stdint.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 outputselect.c
+C:\msys64_2\tmp\ccALKTEv.s:2      *ABS*:0000003e __SP_H__
+C:\msys64_2\tmp\ccALKTEv.s:3      *ABS*:0000003d __SP_L__
+C:\msys64_2\tmp\ccALKTEv.s:4      *ABS*:0000003f __SREG__
+C:\msys64_2\tmp\ccALKTEv.s:5      *ABS*:00000000 __tmp_reg__
+C:\msys64_2\tmp\ccALKTEv.s:6      *ABS*:00000001 __zero_reg__
+C:\msys64_2\tmp\ccALKTEv.s:13     .text.set_output_user:00000000 set_output_user
+C:\msys64_2\tmp\ccALKTEv.s:30     .text.set_output:00000000 set_output
+C:\msys64_2\tmp\ccALKTEv.s:112    .bss.desired_output:00000000 desired_output
+C:\msys64_2\tmp\ccALKTEv.s:61     .text.auto_detect_output:00000000 auto_detect_output
+C:\msys64_2\tmp\ccALKTEv.s:87     .text.where_to_send:00000000 where_to_send
+
+UNDEFINED SYMBOLS
+USB_DeviceState
+__do_clear_bss

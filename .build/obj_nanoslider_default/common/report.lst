@@ -1,0 +1,693 @@
+   1               		.file	"report.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.has_anykey,"ax",@progbits
+  11               	.global	has_anykey
+  13               	has_anykey:
+  14               	.LFB100:
+  15               		.file 1 "tmk_core/common/report.c"
+   1:tmk_core/common/report.c **** /* Copyright 2017 Fred Sundvik
+   2:tmk_core/common/report.c ****  *
+   3:tmk_core/common/report.c ****  * This program is free software: you can redistribute it and/or modify
+   4:tmk_core/common/report.c ****  * it under the terms of the GNU General Public License as published by
+   5:tmk_core/common/report.c ****  * the Free Software Foundation, either version 2 of the License, or
+   6:tmk_core/common/report.c ****  * (at your option) any later version.
+   7:tmk_core/common/report.c ****  *
+   8:tmk_core/common/report.c ****  * This program is distributed in the hope that it will be useful,
+   9:tmk_core/common/report.c ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  10:tmk_core/common/report.c ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  11:tmk_core/common/report.c ****  * GNU General Public License for more details.
+  12:tmk_core/common/report.c ****  *
+  13:tmk_core/common/report.c ****  * You should have received a copy of the GNU General Public License
+  14:tmk_core/common/report.c ****  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  15:tmk_core/common/report.c ****  */
+  16:tmk_core/common/report.c **** 
+  17:tmk_core/common/report.c **** #include "report.h"
+  18:tmk_core/common/report.c **** #include "host.h"
+  19:tmk_core/common/report.c **** #include "keycode_config.h"
+  20:tmk_core/common/report.c **** #include "debug.h"
+  21:tmk_core/common/report.c **** #include "util.h"
+  22:tmk_core/common/report.c **** #include <string.h>
+  23:tmk_core/common/report.c **** 
+  24:tmk_core/common/report.c **** /** \brief has_anykey
+  25:tmk_core/common/report.c ****  *
+  26:tmk_core/common/report.c ****  * FIXME: Needs doc
+  27:tmk_core/common/report.c ****  */
+  28:tmk_core/common/report.c **** uint8_t has_anykey(report_keyboard_t* keyboard_report)
+  29:tmk_core/common/report.c **** {
+  16               		.loc 1 29 0
+  17               		.cfi_startproc
+  18               	.LVL0:
+  19               	/* prologue: function */
+  20               	/* frame size = 0 */
+  21               	/* stack size = 0 */
+  22               	.L__stack_usage = 0
+  30:tmk_core/common/report.c ****     uint8_t cnt = 0;
+  31:tmk_core/common/report.c ****     uint8_t *p = keyboard_report->keys;
+  23               		.loc 1 31 0
+  24 0000 FC01      		movw r30,r24
+  25 0002 3296      		adiw r30,2
+  26               	.LVL1:
+  32:tmk_core/common/report.c ****     uint8_t lp = sizeof(keyboard_report->keys);
+  33:tmk_core/common/report.c **** #ifdef NKRO_ENABLE
+  34:tmk_core/common/report.c ****     if (keyboard_protocol && keymap_config.nkro) {
+  27               		.loc 1 34 0
+  28 0004 8091 0000 		lds r24,keyboard_protocol
+  29               	.LVL2:
+  30 0008 8823      		tst r24
+  31 000a 01F0      		breq .L7
+  32               		.loc 1 34 0 is_stmt 0 discriminator 1
+  33 000c 8091 0000 		lds r24,keymap_config
+  34 0010 87FF      		sbrs r24,7
+  35 0012 00C0      		rjmp .L7
+  35:tmk_core/common/report.c ****         p = keyboard_report->nkro.bits;
+  36:tmk_core/common/report.c ****         lp = sizeof(keyboard_report->nkro.bits);
+  36               		.loc 1 36 0 is_stmt 1
+  37 0014 9EE1      		ldi r25,lo8(30)
+  38 0016 00C0      		rjmp .L2
+  39               	.L7:
+  32:tmk_core/common/report.c ****     uint8_t lp = sizeof(keyboard_report->keys);
+  40               		.loc 1 32 0
+  41 0018 96E0      		ldi r25,lo8(6)
+  42               	.L2:
+  43 001a 80E0      		ldi r24,0
+  44               	.LVL3:
+  45               	.L3:
+  37:tmk_core/common/report.c ****     }
+  38:tmk_core/common/report.c **** #endif
+  39:tmk_core/common/report.c ****     while (lp--) {
+  46               		.loc 1 39 0
+  47               	.LVL4:
+  48 001c 9150      		subi r25,1
+  49 001e 00F0      		brcs .L12
+  40:tmk_core/common/report.c ****         if (*p++)
+  50               		.loc 1 40 0
+  51 0020 2191      		ld r18,Z+
+  52               	.LVL5:
+  53 0022 2223      		tst r18
+  54 0024 01F0      		breq .L3
+  41:tmk_core/common/report.c ****             cnt++;
+  55               		.loc 1 41 0
+  56 0026 8F5F      		subi r24,lo8(-(1))
+  57               	.LVL6:
+  58 0028 00C0      		rjmp .L3
+  59               	.L12:
+  60               	/* epilogue start */
+  42:tmk_core/common/report.c ****     }
+  43:tmk_core/common/report.c ****     return cnt;
+  44:tmk_core/common/report.c **** }
+  61               		.loc 1 44 0
+  62 002a 0895      		ret
+  63               		.cfi_endproc
+  64               	.LFE100:
+  66               		.section	.text.get_first_key,"ax",@progbits
+  67               	.global	get_first_key
+  69               	get_first_key:
+  70               	.LFB101:
+  45:tmk_core/common/report.c **** 
+  46:tmk_core/common/report.c **** /** \brief get_first_key
+  47:tmk_core/common/report.c ****  *
+  48:tmk_core/common/report.c ****  * FIXME: Needs doc
+  49:tmk_core/common/report.c ****  */
+  50:tmk_core/common/report.c **** uint8_t get_first_key(report_keyboard_t* keyboard_report)
+  51:tmk_core/common/report.c **** {
+  71               		.loc 1 51 0
+  72               		.cfi_startproc
+  73               	.LVL7:
+  74 0000 CF93      		push r28
+  75               	.LCFI0:
+  76               		.cfi_def_cfa_offset 3
+  77               		.cfi_offset 28, -2
+  78 0002 DF93      		push r29
+  79               	.LCFI1:
+  80               		.cfi_def_cfa_offset 4
+  81               		.cfi_offset 29, -3
+  82               	/* prologue: function */
+  83               	/* frame size = 0 */
+  84               	/* stack size = 2 */
+  85               	.L__stack_usage = 2
+  52:tmk_core/common/report.c **** #ifdef NKRO_ENABLE
+  53:tmk_core/common/report.c ****     if (keyboard_protocol && keymap_config.nkro) {
+  86               		.loc 1 53 0
+  87 0004 2091 0000 		lds r18,keyboard_protocol
+  88 0008 FC01      		movw r30,r24
+  89 000a 2223      		tst r18
+  90 000c 01F0      		breq .L14
+  91               		.loc 1 53 0 is_stmt 0 discriminator 1
+  92 000e 2091 0000 		lds r18,keymap_config
+  93 0012 27FF      		sbrs r18,7
+  94 0014 00C0      		rjmp .L14
+  95 0016 3296      		adiw r30,2
+  96               		.loc 1 53 0
+  97 0018 C0E0      		ldi r28,0
+  98               	.L15:
+  99               	.LVL8:
+ 100               	.LBB2:
+  54:tmk_core/common/report.c ****         uint8_t i = 0;
+  55:tmk_core/common/report.c ****         for (; i < KEYBOARD_REPORT_BITS && !keyboard_report->nkro.bits[i]; i++)
+ 101               		.loc 1 55 0 is_stmt 1 discriminator 2
+ 102 001a 2191      		ld r18,Z+
+ 103 001c 2111      		cpse r18,__zero_reg__
+ 104 001e 00C0      		rjmp .L16
+ 105               		.loc 1 55 0 is_stmt 0 discriminator 3
+ 106 0020 CF5F      		subi r28,lo8(-(1))
+ 107               	.LVL9:
+ 108 0022 CE31      		cpi r28,lo8(30)
+ 109 0024 01F4      		brne .L15
+ 110               	.L16:
+  56:tmk_core/common/report.c ****             ;
+  57:tmk_core/common/report.c ****         return i<<3 | biton(keyboard_report->nkro.bits[i]);
+ 111               		.loc 1 57 0 is_stmt 1
+ 112 0026 D0E0      		ldi r29,0
+ 113 0028 FC01      		movw r30,r24
+ 114 002a EC0F      		add r30,r28
+ 115 002c FD1F      		adc r31,r29
+ 116 002e 8281      		ldd r24,Z+2
+ 117               	.LVL10:
+ 118 0030 0E94 0000 		call biton
+ 119               	.LVL11:
+ 120 0034 93E0      		ldi r25,3
+ 121               		1:
+ 122 0036 CC0F      		lsl r28
+ 123 0038 DD1F      		rol r29
+ 124 003a 9A95      		dec r25
+ 125 003c 01F4      		brne 1b
+ 126               	.LVL12:
+ 127 003e 8C2B      		or r24,r28
+ 128 0040 00C0      		rjmp .L18
+ 129               	.LVL13:
+ 130               	.L14:
+ 131               	.LBE2:
+  58:tmk_core/common/report.c ****     }
+  59:tmk_core/common/report.c **** #endif
+  60:tmk_core/common/report.c **** #ifdef USB_6KRO_ENABLE
+  61:tmk_core/common/report.c ****     uint8_t i = cb_head;
+  62:tmk_core/common/report.c ****     do {
+  63:tmk_core/common/report.c ****         if (keyboard_report->keys[i] != 0) {
+  64:tmk_core/common/report.c ****             break;
+  65:tmk_core/common/report.c ****         }
+  66:tmk_core/common/report.c ****         i = RO_INC(i);
+  67:tmk_core/common/report.c ****     } while (i != cb_tail);
+  68:tmk_core/common/report.c ****     return keyboard_report->keys[i];
+  69:tmk_core/common/report.c **** #else
+  70:tmk_core/common/report.c ****     return keyboard_report->keys[0];
+ 132               		.loc 1 70 0
+ 133 0042 8281      		ldd r24,Z+2
+ 134               	.LVL14:
+ 135               	.L18:
+ 136               	/* epilogue start */
+  71:tmk_core/common/report.c **** #endif
+  72:tmk_core/common/report.c **** }
+ 137               		.loc 1 72 0
+ 138 0044 DF91      		pop r29
+ 139 0046 CF91      		pop r28
+ 140 0048 0895      		ret
+ 141               		.cfi_endproc
+ 142               	.LFE101:
+ 144               		.section	.text.add_key_byte,"ax",@progbits
+ 145               	.global	add_key_byte
+ 147               	add_key_byte:
+ 148               	.LFB102:
+  73:tmk_core/common/report.c **** 
+  74:tmk_core/common/report.c **** /** \brief add key byte
+  75:tmk_core/common/report.c ****  *
+  76:tmk_core/common/report.c ****  * FIXME: Needs doc
+  77:tmk_core/common/report.c ****  */
+  78:tmk_core/common/report.c **** void add_key_byte(report_keyboard_t* keyboard_report, uint8_t code)
+  79:tmk_core/common/report.c **** {
+ 149               		.loc 1 79 0
+ 150               		.cfi_startproc
+ 151               	.LVL15:
+ 152               	/* prologue: function */
+ 153               	/* frame size = 0 */
+ 154               	/* stack size = 0 */
+ 155               	.L__stack_usage = 0
+ 156 0000 9C01      		movw r18,r24
+ 157               	.LVL16:
+ 158 0002 FC01      		movw r30,r24
+ 159 0004 3296      		adiw r30,2
+  80:tmk_core/common/report.c **** #ifdef USB_6KRO_ENABLE
+  81:tmk_core/common/report.c ****     int8_t i = cb_head;
+  82:tmk_core/common/report.c ****     int8_t empty = -1;
+  83:tmk_core/common/report.c ****     if (cb_count) {
+  84:tmk_core/common/report.c ****         do {
+  85:tmk_core/common/report.c ****             if (keyboard_report->keys[i] == code) {
+  86:tmk_core/common/report.c ****                 return;
+  87:tmk_core/common/report.c ****             }
+  88:tmk_core/common/report.c ****             if (empty == -1 && keyboard_report->keys[i] == 0) {
+  89:tmk_core/common/report.c ****                 empty = i;
+  90:tmk_core/common/report.c ****             }
+  91:tmk_core/common/report.c ****             i = RO_INC(i);
+  92:tmk_core/common/report.c ****         } while (i != cb_tail);
+  93:tmk_core/common/report.c ****         if (i == cb_tail) {
+  94:tmk_core/common/report.c ****             if (cb_tail == cb_head) {
+  95:tmk_core/common/report.c ****                 // buffer is full
+  96:tmk_core/common/report.c ****                 if (empty == -1) {
+  97:tmk_core/common/report.c ****                     // pop head when has no empty space
+  98:tmk_core/common/report.c ****                     cb_head = RO_INC(cb_head);
+  99:tmk_core/common/report.c ****                     cb_count--;
+ 100:tmk_core/common/report.c ****                 }
+ 101:tmk_core/common/report.c ****                 else {
+ 102:tmk_core/common/report.c ****                     // left shift when has empty space
+ 103:tmk_core/common/report.c ****                     uint8_t offset = 1;
+ 104:tmk_core/common/report.c ****                     i = RO_INC(empty);
+ 105:tmk_core/common/report.c ****                     do {
+ 106:tmk_core/common/report.c ****                         if (keyboard_report->keys[i] != 0) {
+ 107:tmk_core/common/report.c ****                             keyboard_report->keys[empty] = keyboard_report->keys[i];
+ 108:tmk_core/common/report.c ****                             keyboard_report->keys[i] = 0;
+ 109:tmk_core/common/report.c ****                             empty = RO_INC(empty);
+ 110:tmk_core/common/report.c ****                         }
+ 111:tmk_core/common/report.c ****                         else {
+ 112:tmk_core/common/report.c ****                             offset++;
+ 113:tmk_core/common/report.c ****                         }
+ 114:tmk_core/common/report.c ****                         i = RO_INC(i);
+ 115:tmk_core/common/report.c ****                     } while (i != cb_tail);
+ 116:tmk_core/common/report.c ****                     cb_tail = RO_SUB(cb_tail, offset);
+ 117:tmk_core/common/report.c ****                 }
+ 118:tmk_core/common/report.c ****             }
+ 119:tmk_core/common/report.c ****         }
+ 120:tmk_core/common/report.c ****     }
+ 121:tmk_core/common/report.c ****     // add to tail
+ 122:tmk_core/common/report.c ****     keyboard_report->keys[cb_tail] = code;
+ 123:tmk_core/common/report.c ****     cb_tail = RO_INC(cb_tail);
+ 124:tmk_core/common/report.c ****     cb_count++;
+ 125:tmk_core/common/report.c **** #else
+ 126:tmk_core/common/report.c ****     int8_t i = 0;
+ 127:tmk_core/common/report.c ****     int8_t empty = -1;
+ 160               		.loc 1 127 0
+ 161 0006 9FEF      		ldi r25,lo8(-1)
+ 126:tmk_core/common/report.c ****     int8_t empty = -1;
+ 162               		.loc 1 126 0
+ 163 0008 80E0      		ldi r24,0
+ 164               	.LVL17:
+ 165               	.L31:
+ 128:tmk_core/common/report.c ****     for (; i < KEYBOARD_REPORT_KEYS; i++) {
+ 129:tmk_core/common/report.c ****         if (keyboard_report->keys[i] == code) {
+ 166               		.loc 1 129 0
+ 167 000a 4191      		ld r20,Z+
+ 168 000c 4617      		cp r20,r22
+ 169 000e 01F0      		breq .L28
+ 130:tmk_core/common/report.c ****             break;
+ 131:tmk_core/common/report.c ****         }
+ 132:tmk_core/common/report.c ****         if (empty == -1 && keyboard_report->keys[i] == 0) {
+ 170               		.loc 1 132 0
+ 171 0010 9F3F      		cpi r25,lo8(-1)
+ 172 0012 01F4      		brne .L30
+ 173               		.loc 1 132 0 is_stmt 0 discriminator 1
+ 174 0014 4111      		cpse r20,__zero_reg__
+ 175 0016 00C0      		rjmp .L30
+ 176               		.loc 1 132 0
+ 177 0018 982F      		mov r25,r24
+ 178               	.LVL18:
+ 179               	.L30:
+ 180 001a 8F5F      		subi r24,lo8(-(1))
+ 181               	.LVL19:
+ 128:tmk_core/common/report.c ****     for (; i < KEYBOARD_REPORT_KEYS; i++) {
+ 182               		.loc 1 128 0 is_stmt 1
+ 183 001c 8630      		cpi r24,lo8(6)
+ 184 001e 01F4      		brne .L31
+ 133:tmk_core/common/report.c ****             empty = i;
+ 134:tmk_core/common/report.c ****         }
+ 135:tmk_core/common/report.c ****     }
+ 136:tmk_core/common/report.c ****     if (i == KEYBOARD_REPORT_KEYS) {
+ 137:tmk_core/common/report.c ****         if (empty != -1) {
+ 185               		.loc 1 137 0
+ 186 0020 9F3F      		cpi r25,lo8(-1)
+ 187 0022 01F0      		breq .L28
+ 138:tmk_core/common/report.c ****             keyboard_report->keys[empty] = code;
+ 188               		.loc 1 138 0
+ 189 0024 F901      		movw r30,r18
+ 190 0026 E90F      		add r30,r25
+ 191 0028 F11D      		adc r31,__zero_reg__
+ 192 002a 97FD      		sbrc r25,7
+ 193 002c FA95      		dec r31
+ 194 002e 6283      		std Z+2,r22
+ 139:tmk_core/common/report.c ****         }
+ 140:tmk_core/common/report.c ****     }
+ 141:tmk_core/common/report.c **** #endif
+ 142:tmk_core/common/report.c **** }
+ 195               		.loc 1 142 0
+ 196 0030 0895      		ret
+ 197               	.L28:
+ 198 0032 0895      		ret
+ 199               		.cfi_endproc
+ 200               	.LFE102:
+ 202               		.section	.text.del_key_byte,"ax",@progbits
+ 203               	.global	del_key_byte
+ 205               	del_key_byte:
+ 206               	.LFB103:
+ 143:tmk_core/common/report.c **** 
+ 144:tmk_core/common/report.c **** /** \brief del key byte
+ 145:tmk_core/common/report.c ****  *
+ 146:tmk_core/common/report.c ****  * FIXME: Needs doc
+ 147:tmk_core/common/report.c ****  */
+ 148:tmk_core/common/report.c **** void del_key_byte(report_keyboard_t* keyboard_report, uint8_t code)
+ 149:tmk_core/common/report.c **** {
+ 207               		.loc 1 149 0
+ 208               		.cfi_startproc
+ 209               	.LVL20:
+ 210               	/* prologue: function */
+ 211               	/* frame size = 0 */
+ 212               	/* stack size = 0 */
+ 213               	.L__stack_usage = 0
+ 214 0000 9C01      		movw r18,r24
+ 215 0002 2A5F      		subi r18,-6
+ 216 0004 3F4F      		sbci r19,-1
+ 217               	.LVL21:
+ 218               	.L38:
+ 219               	.LBB3:
+ 150:tmk_core/common/report.c **** #ifdef USB_6KRO_ENABLE
+ 151:tmk_core/common/report.c ****     uint8_t i = cb_head;
+ 152:tmk_core/common/report.c ****     if (cb_count) {
+ 153:tmk_core/common/report.c ****         do {
+ 154:tmk_core/common/report.c ****             if (keyboard_report->keys[i] == code) {
+ 155:tmk_core/common/report.c ****                 keyboard_report->keys[i] = 0;
+ 156:tmk_core/common/report.c ****                 cb_count--;
+ 157:tmk_core/common/report.c ****                 if (cb_count == 0) {
+ 158:tmk_core/common/report.c ****                     // reset head and tail
+ 159:tmk_core/common/report.c ****                     cb_tail = cb_head = 0;
+ 160:tmk_core/common/report.c ****                 }
+ 161:tmk_core/common/report.c ****                 if (i == RO_DEC(cb_tail)) {
+ 162:tmk_core/common/report.c ****                     // left shift when next to tail
+ 163:tmk_core/common/report.c ****                     do {
+ 164:tmk_core/common/report.c ****                         cb_tail = RO_DEC(cb_tail);
+ 165:tmk_core/common/report.c ****                         if (keyboard_report->keys[RO_DEC(cb_tail)] != 0) {
+ 166:tmk_core/common/report.c ****                             break;
+ 167:tmk_core/common/report.c ****                         }
+ 168:tmk_core/common/report.c ****                     } while (cb_tail != cb_head);
+ 169:tmk_core/common/report.c ****                 }
+ 170:tmk_core/common/report.c ****                 break;
+ 171:tmk_core/common/report.c ****             }
+ 172:tmk_core/common/report.c ****             i = RO_INC(i);
+ 173:tmk_core/common/report.c ****         } while (i != cb_tail);
+ 174:tmk_core/common/report.c ****     }
+ 175:tmk_core/common/report.c **** #else
+ 176:tmk_core/common/report.c ****     for (uint8_t i = 0; i < KEYBOARD_REPORT_KEYS; i++) {
+ 177:tmk_core/common/report.c ****         if (keyboard_report->keys[i] == code) {
+ 220               		.loc 1 177 0
+ 221 0006 FC01      		movw r30,r24
+ 222 0008 4281      		ldd r20,Z+2
+ 223 000a 4613      		cpse r20,r22
+ 224 000c 00C0      		rjmp .L37
+ 178:tmk_core/common/report.c ****             keyboard_report->keys[i] = 0;
+ 225               		.loc 1 178 0
+ 226 000e 1282      		std Z+2,__zero_reg__
+ 227               	.L37:
+ 228               	.LVL22:
+ 229 0010 0196      		adiw r24,1
+ 230               	.LVL23:
+ 176:tmk_core/common/report.c ****         if (keyboard_report->keys[i] == code) {
+ 231               		.loc 1 176 0 discriminator 2
+ 232 0012 8217      		cp r24,r18
+ 233 0014 9307      		cpc r25,r19
+ 234 0016 01F4      		brne .L38
+ 235               	/* epilogue start */
+ 236               	.LBE3:
+ 179:tmk_core/common/report.c ****         }
+ 180:tmk_core/common/report.c ****     }
+ 181:tmk_core/common/report.c **** #endif
+ 182:tmk_core/common/report.c **** }
+ 237               		.loc 1 182 0
+ 238 0018 0895      		ret
+ 239               		.cfi_endproc
+ 240               	.LFE103:
+ 242               		.section	.text.add_key_bit,"ax",@progbits
+ 243               	.global	add_key_bit
+ 245               	add_key_bit:
+ 246               	.LFB104:
+ 183:tmk_core/common/report.c **** 
+ 184:tmk_core/common/report.c **** #ifdef NKRO_ENABLE
+ 185:tmk_core/common/report.c **** /** \brief add key bit
+ 186:tmk_core/common/report.c ****  *
+ 187:tmk_core/common/report.c ****  * FIXME: Needs doc
+ 188:tmk_core/common/report.c ****  */
+ 189:tmk_core/common/report.c **** void add_key_bit(report_keyboard_t* keyboard_report, uint8_t code)
+ 190:tmk_core/common/report.c **** {
+ 247               		.loc 1 190 0
+ 248               		.cfi_startproc
+ 249               	.LVL24:
+ 250               	/* prologue: function */
+ 251               	/* frame size = 0 */
+ 252               	/* stack size = 0 */
+ 253               	.L__stack_usage = 0
+ 191:tmk_core/common/report.c ****     if ((code>>3) < KEYBOARD_REPORT_BITS) {
+ 254               		.loc 1 191 0
+ 255 0000 262F      		mov r18,r22
+ 256 0002 2695      		lsr r18
+ 257 0004 2695      		lsr r18
+ 258 0006 2695      		lsr r18
+ 259 0008 2E31      		cpi r18,lo8(30)
+ 260 000a 00F4      		brsh .L40
+ 192:tmk_core/common/report.c ****         keyboard_report->nkro.bits[code>>3] |= 1<<(code&7);
+ 261               		.loc 1 192 0
+ 262 000c FC01      		movw r30,r24
+ 263 000e E20F      		add r30,r18
+ 264 0010 F11D      		adc r31,__zero_reg__
+ 265 0012 6770      		andi r22,lo8(7)
+ 266               	.LVL25:
+ 267 0014 21E0      		ldi r18,lo8(1)
+ 268 0016 30E0      		ldi r19,0
+ 269 0018 00C0      		rjmp 2f
+ 270               		1:
+ 271 001a 220F      		lsl r18
+ 272               		2:
+ 273 001c 6A95      		dec r22
+ 274 001e 02F4      		brpl 1b
+ 275 0020 8281      		ldd r24,Z+2
+ 276               	.LVL26:
+ 277 0022 282B      		or r18,r24
+ 278 0024 2283      		std Z+2,r18
+ 279               	.L40:
+ 280 0026 0895      		ret
+ 281               		.cfi_endproc
+ 282               	.LFE104:
+ 284               		.section	.text.del_key_bit,"ax",@progbits
+ 285               	.global	del_key_bit
+ 287               	del_key_bit:
+ 288               	.LFB105:
+ 193:tmk_core/common/report.c ****     } else {
+ 194:tmk_core/common/report.c ****         dprintf("add_key_bit: can't add: %02X\n", code);
+ 195:tmk_core/common/report.c ****     }
+ 196:tmk_core/common/report.c **** }
+ 197:tmk_core/common/report.c **** 
+ 198:tmk_core/common/report.c **** /** \brief del key bit
+ 199:tmk_core/common/report.c ****  *
+ 200:tmk_core/common/report.c ****  * FIXME: Needs doc
+ 201:tmk_core/common/report.c ****  */
+ 202:tmk_core/common/report.c **** void del_key_bit(report_keyboard_t* keyboard_report, uint8_t code)
+ 203:tmk_core/common/report.c **** {
+ 289               		.loc 1 203 0
+ 290               		.cfi_startproc
+ 291               	.LVL27:
+ 292               	/* prologue: function */
+ 293               	/* frame size = 0 */
+ 294               	/* stack size = 0 */
+ 295               	.L__stack_usage = 0
+ 204:tmk_core/common/report.c ****     if ((code>>3) < KEYBOARD_REPORT_BITS) {
+ 296               		.loc 1 204 0
+ 297 0000 262F      		mov r18,r22
+ 298 0002 2695      		lsr r18
+ 299 0004 2695      		lsr r18
+ 300 0006 2695      		lsr r18
+ 301 0008 2E31      		cpi r18,lo8(30)
+ 302 000a 00F4      		brsh .L42
+ 205:tmk_core/common/report.c ****         keyboard_report->nkro.bits[code>>3] &= ~(1<<(code&7));
+ 303               		.loc 1 205 0
+ 304 000c FC01      		movw r30,r24
+ 305 000e E20F      		add r30,r18
+ 306 0010 F11D      		adc r31,__zero_reg__
+ 307 0012 6770      		andi r22,lo8(7)
+ 308               	.LVL28:
+ 309 0014 21E0      		ldi r18,lo8(1)
+ 310 0016 30E0      		ldi r19,0
+ 311 0018 00C0      		rjmp 2f
+ 312               		1:
+ 313 001a 220F      		lsl r18
+ 314               		2:
+ 315 001c 6A95      		dec r22
+ 316 001e 02F4      		brpl 1b
+ 317 0020 2095      		com r18
+ 318 0022 8281      		ldd r24,Z+2
+ 319               	.LVL29:
+ 320 0024 2823      		and r18,r24
+ 321 0026 2283      		std Z+2,r18
+ 322               	.L42:
+ 323 0028 0895      		ret
+ 324               		.cfi_endproc
+ 325               	.LFE105:
+ 327               		.section	.text.add_key_to_report,"ax",@progbits
+ 328               	.global	add_key_to_report
+ 330               	add_key_to_report:
+ 331               	.LFB106:
+ 206:tmk_core/common/report.c ****     } else {
+ 207:tmk_core/common/report.c ****         dprintf("del_key_bit: can't del: %02X\n", code);
+ 208:tmk_core/common/report.c ****     }
+ 209:tmk_core/common/report.c **** }
+ 210:tmk_core/common/report.c **** #endif
+ 211:tmk_core/common/report.c **** 
+ 212:tmk_core/common/report.c **** /** \brief add key to report
+ 213:tmk_core/common/report.c ****  *
+ 214:tmk_core/common/report.c ****  * FIXME: Needs doc
+ 215:tmk_core/common/report.c ****  */
+ 216:tmk_core/common/report.c **** void add_key_to_report(report_keyboard_t* keyboard_report, uint8_t key)
+ 217:tmk_core/common/report.c **** {
+ 332               		.loc 1 217 0
+ 333               		.cfi_startproc
+ 334               	.LVL30:
+ 335               	/* prologue: function */
+ 336               	/* frame size = 0 */
+ 337               	/* stack size = 0 */
+ 338               	.L__stack_usage = 0
+ 218:tmk_core/common/report.c **** #ifdef NKRO_ENABLE
+ 219:tmk_core/common/report.c ****     if (keyboard_protocol && keymap_config.nkro) {
+ 339               		.loc 1 219 0
+ 340 0000 2091 0000 		lds r18,keyboard_protocol
+ 341 0004 2223      		tst r18
+ 342 0006 01F0      		breq .L45
+ 343               		.loc 1 219 0 is_stmt 0 discriminator 1
+ 344 0008 2091 0000 		lds r18,keymap_config
+ 345 000c 27FD      		sbrc r18,7
+ 220:tmk_core/common/report.c ****         add_key_bit(keyboard_report, key);
+ 346               		.loc 1 220 0 is_stmt 1
+ 347 000e 0C94 0000 		jmp add_key_bit
+ 348               	.LVL31:
+ 349               	.L45:
+ 221:tmk_core/common/report.c ****         return;
+ 222:tmk_core/common/report.c ****     }
+ 223:tmk_core/common/report.c **** #endif
+ 224:tmk_core/common/report.c ****     add_key_byte(keyboard_report, key);
+ 350               		.loc 1 224 0
+ 351 0012 0C94 0000 		jmp add_key_byte
+ 352               	.LVL32:
+ 353               		.cfi_endproc
+ 354               	.LFE106:
+ 356               		.section	.text.del_key_from_report,"ax",@progbits
+ 357               	.global	del_key_from_report
+ 359               	del_key_from_report:
+ 360               	.LFB107:
+ 225:tmk_core/common/report.c **** }
+ 226:tmk_core/common/report.c **** 
+ 227:tmk_core/common/report.c **** /** \brief del key from report
+ 228:tmk_core/common/report.c ****  *
+ 229:tmk_core/common/report.c ****  * FIXME: Needs doc
+ 230:tmk_core/common/report.c ****  */
+ 231:tmk_core/common/report.c **** void del_key_from_report(report_keyboard_t* keyboard_report, uint8_t key)
+ 232:tmk_core/common/report.c **** {
+ 361               		.loc 1 232 0
+ 362               		.cfi_startproc
+ 363               	.LVL33:
+ 364               	/* prologue: function */
+ 365               	/* frame size = 0 */
+ 366               	/* stack size = 0 */
+ 367               	.L__stack_usage = 0
+ 233:tmk_core/common/report.c **** #ifdef NKRO_ENABLE
+ 234:tmk_core/common/report.c ****     if (keyboard_protocol && keymap_config.nkro) {
+ 368               		.loc 1 234 0
+ 369 0000 2091 0000 		lds r18,keyboard_protocol
+ 370 0004 2223      		tst r18
+ 371 0006 01F0      		breq .L53
+ 372               		.loc 1 234 0 is_stmt 0 discriminator 1
+ 373 0008 2091 0000 		lds r18,keymap_config
+ 374 000c 27FD      		sbrc r18,7
+ 235:tmk_core/common/report.c ****         del_key_bit(keyboard_report, key);
+ 375               		.loc 1 235 0 is_stmt 1
+ 376 000e 0C94 0000 		jmp del_key_bit
+ 377               	.LVL34:
+ 378               	.L53:
+ 236:tmk_core/common/report.c ****         return;
+ 237:tmk_core/common/report.c ****     }
+ 238:tmk_core/common/report.c **** #endif
+ 239:tmk_core/common/report.c ****     del_key_byte(keyboard_report, key);
+ 379               		.loc 1 239 0
+ 380 0012 0C94 0000 		jmp del_key_byte
+ 381               	.LVL35:
+ 382               		.cfi_endproc
+ 383               	.LFE107:
+ 385               		.section	.text.clear_keys_from_report,"ax",@progbits
+ 386               	.global	clear_keys_from_report
+ 388               	clear_keys_from_report:
+ 389               	.LFB108:
+ 240:tmk_core/common/report.c **** }
+ 241:tmk_core/common/report.c **** 
+ 242:tmk_core/common/report.c **** /** \brief clear key from report
+ 243:tmk_core/common/report.c ****  *
+ 244:tmk_core/common/report.c ****  * FIXME: Needs doc
+ 245:tmk_core/common/report.c ****  */
+ 246:tmk_core/common/report.c **** void clear_keys_from_report(report_keyboard_t* keyboard_report)
+ 247:tmk_core/common/report.c **** {
+ 390               		.loc 1 247 0
+ 391               		.cfi_startproc
+ 392               	.LVL36:
+ 393               	/* prologue: function */
+ 394               	/* frame size = 0 */
+ 395               	/* stack size = 0 */
+ 396               	.L__stack_usage = 0
+ 248:tmk_core/common/report.c ****     // not clear mods
+ 249:tmk_core/common/report.c **** #ifdef NKRO_ENABLE
+ 250:tmk_core/common/report.c ****     if (keyboard_protocol && keymap_config.nkro) {
+ 397               		.loc 1 250 0
+ 398 0000 2091 0000 		lds r18,keyboard_protocol
+ 399 0004 FC01      		movw r30,r24
+ 400 0006 3296      		adiw r30,2
+ 401 0008 2223      		tst r18
+ 402 000a 01F0      		breq .L61
+ 403               		.loc 1 250 0 is_stmt 0 discriminator 1
+ 404 000c 8091 0000 		lds r24,keymap_config
+ 405               	.LVL37:
+ 406 0010 87FF      		sbrs r24,7
+ 407 0012 00C0      		rjmp .L61
+ 251:tmk_core/common/report.c ****         memset(keyboard_report->nkro.bits, 0, sizeof(keyboard_report->nkro.bits));
+ 408               		.loc 1 251 0 is_stmt 1
+ 409 0014 8EE1      		ldi r24,lo8(30)
+ 410 0016 00C0      		rjmp .L69
+ 411               	.L61:
+ 252:tmk_core/common/report.c ****         return;
+ 253:tmk_core/common/report.c ****     }
+ 254:tmk_core/common/report.c **** #endif
+ 255:tmk_core/common/report.c ****     memset(keyboard_report->keys, 0, sizeof(keyboard_report->keys));
+ 412               		.loc 1 255 0
+ 413 0018 86E0      		ldi r24,lo8(6)
+ 414               	.L69:
+ 415 001a DF01      		movw r26,r30
+ 416               		0:
+ 417 001c 1D92      		st X+,__zero_reg__
+ 418 001e 8A95      		dec r24
+ 419 0020 01F4      		brne 0b
+ 420 0022 0895      		ret
+ 421               		.cfi_endproc
+ 422               	.LFE108:
+ 424               		.text
+ 425               	.Letext0:
+ 426               		.file 2 "d:\\program files\\msys2\\home\\bnguy\\qmk_utils\\avr8-gnu-toolchain\\avr\\include\\stdin
+ 427               		.file 3 "tmk_core/common/report.h"
+ 428               		.file 4 "quantum/keycode_config.h"
+ 429               		.file 5 "lib/lufa/LUFA/Drivers/USB/Core/USBTask.h"
+ 430               		.file 6 "tmk_core/common/host.h"
+ 431               		.file 7 "tmk_core/common/util.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 report.c
+D:\Program Files\msys2\tmp\ccPkIVal.s:2      *ABS*:0000003e __SP_H__
+D:\Program Files\msys2\tmp\ccPkIVal.s:3      *ABS*:0000003d __SP_L__
+D:\Program Files\msys2\tmp\ccPkIVal.s:4      *ABS*:0000003f __SREG__
+D:\Program Files\msys2\tmp\ccPkIVal.s:5      *ABS*:00000000 __tmp_reg__
+D:\Program Files\msys2\tmp\ccPkIVal.s:6      *ABS*:00000001 __zero_reg__
+D:\Program Files\msys2\tmp\ccPkIVal.s:13     .text.has_anykey:00000000 has_anykey
+D:\Program Files\msys2\tmp\ccPkIVal.s:69     .text.get_first_key:00000000 get_first_key
+D:\Program Files\msys2\tmp\ccPkIVal.s:147    .text.add_key_byte:00000000 add_key_byte
+D:\Program Files\msys2\tmp\ccPkIVal.s:205    .text.del_key_byte:00000000 del_key_byte
+D:\Program Files\msys2\tmp\ccPkIVal.s:245    .text.add_key_bit:00000000 add_key_bit
+D:\Program Files\msys2\tmp\ccPkIVal.s:287    .text.del_key_bit:00000000 del_key_bit
+D:\Program Files\msys2\tmp\ccPkIVal.s:330    .text.add_key_to_report:00000000 add_key_to_report
+D:\Program Files\msys2\tmp\ccPkIVal.s:359    .text.del_key_from_report:00000000 del_key_from_report
+D:\Program Files\msys2\tmp\ccPkIVal.s:388    .text.clear_keys_from_report:00000000 clear_keys_from_report
+
+UNDEFINED SYMBOLS
+keyboard_protocol
+keymap_config
+biton

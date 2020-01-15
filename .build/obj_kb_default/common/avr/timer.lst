@@ -1,0 +1,688 @@
+   1               		.file	"timer.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.timer_init,"ax",@progbits
+  11               	.global	timer_init
+  13               	timer_init:
+  14               	.LFB5:
+  15               		.file 1 "tmk_core/common/avr/timer.c"
+   1:tmk_core/common/avr/timer.c **** /*
+   2:tmk_core/common/avr/timer.c **** Copyright 2011 Jun Wako <wakojun@gmail.com>
+   3:tmk_core/common/avr/timer.c **** 
+   4:tmk_core/common/avr/timer.c **** This program is free software: you can redistribute it and/or modify
+   5:tmk_core/common/avr/timer.c **** it under the terms of the GNU General Public License as published by
+   6:tmk_core/common/avr/timer.c **** the Free Software Foundation, either version 2 of the License, or
+   7:tmk_core/common/avr/timer.c **** (at your option) any later version.
+   8:tmk_core/common/avr/timer.c **** 
+   9:tmk_core/common/avr/timer.c **** This program is distributed in the hope that it will be useful,
+  10:tmk_core/common/avr/timer.c **** but WITHOUT ANY WARRANTY; without even the implied warranty of
+  11:tmk_core/common/avr/timer.c **** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  12:tmk_core/common/avr/timer.c **** GNU General Public License for more details.
+  13:tmk_core/common/avr/timer.c **** 
+  14:tmk_core/common/avr/timer.c **** You should have received a copy of the GNU General Public License
+  15:tmk_core/common/avr/timer.c **** along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  16:tmk_core/common/avr/timer.c **** */
+  17:tmk_core/common/avr/timer.c **** 
+  18:tmk_core/common/avr/timer.c **** #include <avr/io.h>
+  19:tmk_core/common/avr/timer.c **** #include <avr/interrupt.h>
+  20:tmk_core/common/avr/timer.c **** #include <util/atomic.h>
+  21:tmk_core/common/avr/timer.c **** #include <stdint.h>
+  22:tmk_core/common/avr/timer.c **** #include "timer_avr.h"
+  23:tmk_core/common/avr/timer.c **** #include "timer.h"
+  24:tmk_core/common/avr/timer.c **** 
+  25:tmk_core/common/avr/timer.c **** 
+  26:tmk_core/common/avr/timer.c **** // counter resolution 1ms
+  27:tmk_core/common/avr/timer.c **** // NOTE: union { uint32_t timer32; struct { uint16_t dummy; uint16_t timer16; }}
+  28:tmk_core/common/avr/timer.c **** volatile uint32_t timer_count;
+  29:tmk_core/common/avr/timer.c **** 
+  30:tmk_core/common/avr/timer.c **** /** \brief timer initialization
+  31:tmk_core/common/avr/timer.c ****  *
+  32:tmk_core/common/avr/timer.c ****  * FIXME: needs doc
+  33:tmk_core/common/avr/timer.c ****  */
+  34:tmk_core/common/avr/timer.c **** void timer_init(void)
+  35:tmk_core/common/avr/timer.c **** {
+  16               		.loc 1 35 0
+  17               		.cfi_startproc
+  18               	/* prologue: function */
+  19               	/* frame size = 0 */
+  20               	/* stack size = 0 */
+  21               	.L__stack_usage = 0
+  22               	.LVL0:
+  36:tmk_core/common/avr/timer.c **** #if TIMER_PRESCALER == 1
+  37:tmk_core/common/avr/timer.c ****     uint8_t prescaler = 0x01;
+  38:tmk_core/common/avr/timer.c **** #elif TIMER_PRESCALER == 8
+  39:tmk_core/common/avr/timer.c ****     uint8_t prescaler = 0x02;
+  40:tmk_core/common/avr/timer.c **** #elif TIMER_PRESCALER == 64
+  41:tmk_core/common/avr/timer.c ****     uint8_t prescaler = 0x03;
+  42:tmk_core/common/avr/timer.c **** #elif TIMER_PRESCALER == 256
+  43:tmk_core/common/avr/timer.c ****     uint8_t prescaler = 0x04;
+  44:tmk_core/common/avr/timer.c **** #elif TIMER_PRESCALER == 1024
+  45:tmk_core/common/avr/timer.c ****     uint8_t prescaler = 0x05;
+  46:tmk_core/common/avr/timer.c **** #else
+  47:tmk_core/common/avr/timer.c **** #   error "Timer prescaler value is NOT vaild."
+  48:tmk_core/common/avr/timer.c **** #endif
+  49:tmk_core/common/avr/timer.c **** 
+  50:tmk_core/common/avr/timer.c **** #ifndef __AVR_ATmega32A__
+  51:tmk_core/common/avr/timer.c ****     // Timer0 CTC mode
+  52:tmk_core/common/avr/timer.c ****     TCCR0A = 0x02;
+  23               		.loc 1 52 0
+  24 0000 82E0      		ldi r24,lo8(2)
+  25 0002 84BD      		out 0x24,r24
+  53:tmk_core/common/avr/timer.c **** 
+  54:tmk_core/common/avr/timer.c ****     TCCR0B = prescaler;
+  26               		.loc 1 54 0
+  27 0004 93E0      		ldi r25,lo8(3)
+  28 0006 95BD      		out 0x25,r25
+  55:tmk_core/common/avr/timer.c **** 
+  56:tmk_core/common/avr/timer.c ****     OCR0A = TIMER_RAW_TOP;
+  29               		.loc 1 56 0
+  30 0008 9AEF      		ldi r25,lo8(-6)
+  31 000a 97BD      		out 0x27,r25
+  57:tmk_core/common/avr/timer.c ****     TIMSK0 = (1<<OCIE0A);
+  32               		.loc 1 57 0
+  33 000c 8093 6E00 		sts 110,r24
+  34 0010 0895      		ret
+  35               		.cfi_endproc
+  36               	.LFE5:
+  38               		.section	.text.timer_clear,"ax",@progbits
+  39               	.global	timer_clear
+  41               	timer_clear:
+  42               	.LFB6:
+  58:tmk_core/common/avr/timer.c **** #else
+  59:tmk_core/common/avr/timer.c ****     // Timer0 CTC mode
+  60:tmk_core/common/avr/timer.c ****     TCCR0 = (1 << WGM01) | prescaler;
+  61:tmk_core/common/avr/timer.c **** 
+  62:tmk_core/common/avr/timer.c ****     OCR0 = TIMER_RAW_TOP;
+  63:tmk_core/common/avr/timer.c ****     TIMSK = (1 << OCIE0);
+  64:tmk_core/common/avr/timer.c **** #endif
+  65:tmk_core/common/avr/timer.c **** }
+  66:tmk_core/common/avr/timer.c **** 
+  67:tmk_core/common/avr/timer.c **** /** \brief timer clear
+  68:tmk_core/common/avr/timer.c ****  *
+  69:tmk_core/common/avr/timer.c ****  * FIXME: needs doc
+  70:tmk_core/common/avr/timer.c ****  */
+  71:tmk_core/common/avr/timer.c **** inline
+  72:tmk_core/common/avr/timer.c **** void timer_clear(void)
+  73:tmk_core/common/avr/timer.c **** {
+  43               		.loc 1 73 0
+  44               		.cfi_startproc
+  45               	/* prologue: function */
+  46               	/* frame size = 0 */
+  47               	/* stack size = 0 */
+  48               	.L__stack_usage = 0
+  49               	.LBB27:
+  74:tmk_core/common/avr/timer.c ****   ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+  50               		.loc 1 74 0
+  51 0000 8FB7      		in r24,__SREG__
+  52               	.LVL1:
+  53               	.LBB28:
+  54               	.LBB29:
+  55               		.file 2 "c:\\msys64_2\\home\\egypt2\\qmk_utils\\avr8-gnu-toolchain\\avr\\include\\util\\atomic.h"
+   1:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** /* Copyright (c) 2007 Dean Camera
+   2:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****    All rights reserved.
+   3:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** 
+   4:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****    Redistribution and use in source and binary forms, with or without
+   5:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****    modification, are permitted provided that the following conditions are met:
+   6:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** 
+   7:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****    * Redistributions of source code must retain the above copyright
+   8:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****      notice, this list of conditions and the following disclaimer.
+   9:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** 
+  10:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****    * Redistributions in binary form must reproduce the above copyright
+  11:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****      notice, this list of conditions and the following disclaimer in
+  12:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****      the documentation and/or other materials provided with the
+  13:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****      distribution.
+  14:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** 
+  15:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****    * Neither the name of the copyright holders nor the names of
+  16:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****      contributors may be used to endorse or promote products derived
+  17:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****      from this software without specific prior written permission.
+  18:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** 
+  19:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  20:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  21:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  22:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  23:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  24:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  25:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  26:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  27:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  28:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  29:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****   POSSIBILITY OF SUCH DAMAGE.
+  30:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** */
+  31:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** 
+  32:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** /* $Id$ */
+  33:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** 
+  34:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** #ifndef _UTIL_ATOMIC_H_
+  35:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** #define _UTIL_ATOMIC_H_ 1
+  36:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** 
+  37:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** #include <avr/io.h>
+  38:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** #include <avr/interrupt.h>
+  39:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** 
+  40:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** #if !defined(__DOXYGEN__)
+  41:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** /* Internal helper functions. */
+  42:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** static __inline__ uint8_t __iSeiRetVal(void)
+  43:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** {
+  44:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     sei();
+  45:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     return 1;
+  46:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** }
+  47:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** 
+  48:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** static __inline__ uint8_t __iCliRetVal(void)
+  49:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** {
+  50:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     cli();
+  56               		.loc 2 50 0
+  57               	/* #APP */
+  58               	 ;  50 "c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h" 1
+  59 0002 F894      		cli
+  60               	 ;  0 "" 2
+  61               	.LVL2:
+  62               	/* #NOAPP */
+  63               	.LBE29:
+  64               	.LBE28:
+  75:tmk_core/common/avr/timer.c ****     timer_count = 0;
+  65               		.loc 1 75 0
+  66 0004 1092 0000 		sts timer_count,__zero_reg__
+  67 0008 1092 0000 		sts timer_count+1,__zero_reg__
+  68 000c 1092 0000 		sts timer_count+2,__zero_reg__
+  69 0010 1092 0000 		sts timer_count+3,__zero_reg__
+  70               	.LVL3:
+  71               	.LBB30:
+  72               	.LBB31:
+  51:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     return 1;
+  52:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** }
+  53:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** 
+  54:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** static __inline__ void __iSeiParam(const uint8_t *__s)
+  55:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** {
+  56:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     sei();
+  57:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     __asm__ volatile ("" ::: "memory");
+  58:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     (void)__s;
+  59:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** }
+  60:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** 
+  61:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** static __inline__ void __iCliParam(const uint8_t *__s)
+  62:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** {
+  63:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     cli();
+  64:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     __asm__ volatile ("" ::: "memory");
+  65:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     (void)__s;
+  66:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** }
+  67:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** 
+  68:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** static __inline__ void __iRestore(const  uint8_t *__s)
+  69:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h **** {
+  70:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     SREG = *__s;
+  73               		.loc 2 70 0
+  74 0014 8FBF      		out __SREG__,r24
+  71:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     __asm__ volatile ("" ::: "memory");
+  75               		.loc 2 71 0
+  76               	.LVL4:
+  77 0016 0895      		ret
+  78               	.LBE31:
+  79               	.LBE30:
+  80               	.LBE27:
+  81               		.cfi_endproc
+  82               	.LFE6:
+  84               		.section	.text.timer_read,"ax",@progbits
+  85               	.global	timer_read
+  87               	timer_read:
+  88               	.LFB7:
+  76:tmk_core/common/avr/timer.c ****   }
+  77:tmk_core/common/avr/timer.c **** }
+  78:tmk_core/common/avr/timer.c **** 
+  79:tmk_core/common/avr/timer.c **** /** \brief timer read
+  80:tmk_core/common/avr/timer.c ****  *
+  81:tmk_core/common/avr/timer.c ****  * FIXME: needs doc
+  82:tmk_core/common/avr/timer.c ****  */
+  83:tmk_core/common/avr/timer.c **** inline
+  84:tmk_core/common/avr/timer.c **** uint16_t timer_read(void)
+  85:tmk_core/common/avr/timer.c **** {
+  89               		.loc 1 85 0
+  90               		.cfi_startproc
+  91               	/* prologue: function */
+  92               	/* frame size = 0 */
+  93               	/* stack size = 0 */
+  94               	.L__stack_usage = 0
+  95               	.LBB32:
+  86:tmk_core/common/avr/timer.c ****     uint32_t t;
+  87:tmk_core/common/avr/timer.c **** 
+  88:tmk_core/common/avr/timer.c ****     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+  96               		.loc 1 88 0
+  97 0000 2FB7      		in r18,__SREG__
+  98               	.LVL5:
+  99               	.LBB33:
+ 100               	.LBB34:
+  50:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     return 1;
+ 101               		.loc 2 50 0
+ 102               	/* #APP */
+ 103               	 ;  50 "c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h" 1
+ 104 0002 F894      		cli
+ 105               	 ;  0 "" 2
+ 106               	.LVL6:
+ 107               	/* #NOAPP */
+ 108               	.LBE34:
+ 109               	.LBE33:
+  89:tmk_core/common/avr/timer.c ****       t = timer_count;
+ 110               		.loc 1 89 0
+ 111 0004 8091 0000 		lds r24,timer_count
+ 112 0008 9091 0000 		lds r25,timer_count+1
+ 113 000c A091 0000 		lds r26,timer_count+2
+ 114 0010 B091 0000 		lds r27,timer_count+3
+ 115               	.LVL7:
+ 116               	.LBB35:
+ 117               	.LBB36:
+  70:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     __asm__ volatile ("" ::: "memory");
+ 118               		.loc 2 70 0
+ 119 0014 2FBF      		out __SREG__,r18
+ 120               		.loc 2 71 0
+ 121               	.LVL8:
+ 122               	.LBE36:
+ 123               	.LBE35:
+ 124               	.LBE32:
+  90:tmk_core/common/avr/timer.c ****     }
+  91:tmk_core/common/avr/timer.c **** 
+  92:tmk_core/common/avr/timer.c ****     return (t & 0xFFFF);
+  93:tmk_core/common/avr/timer.c **** }
+ 125               		.loc 1 93 0
+ 126 0016 0895      		ret
+ 127               		.cfi_endproc
+ 128               	.LFE7:
+ 130               		.section	.text.timer_read32,"ax",@progbits
+ 131               	.global	timer_read32
+ 133               	timer_read32:
+ 134               	.LFB8:
+  94:tmk_core/common/avr/timer.c **** 
+  95:tmk_core/common/avr/timer.c **** /** \brief timer read32
+  96:tmk_core/common/avr/timer.c ****  *
+  97:tmk_core/common/avr/timer.c ****  * FIXME: needs doc
+  98:tmk_core/common/avr/timer.c ****  */
+  99:tmk_core/common/avr/timer.c **** inline
+ 100:tmk_core/common/avr/timer.c **** uint32_t timer_read32(void)
+ 101:tmk_core/common/avr/timer.c **** {
+ 135               		.loc 1 101 0
+ 136               		.cfi_startproc
+ 137               	/* prologue: function */
+ 138               	/* frame size = 0 */
+ 139               	/* stack size = 0 */
+ 140               	.L__stack_usage = 0
+ 141               	.LBB37:
+ 102:tmk_core/common/avr/timer.c ****     uint32_t t;
+ 103:tmk_core/common/avr/timer.c **** 
+ 104:tmk_core/common/avr/timer.c ****     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+ 142               		.loc 1 104 0
+ 143 0000 2FB7      		in r18,__SREG__
+ 144               	.LVL9:
+ 145               	.LBB38:
+ 146               	.LBB39:
+  50:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     return 1;
+ 147               		.loc 2 50 0
+ 148               	/* #APP */
+ 149               	 ;  50 "c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h" 1
+ 150 0002 F894      		cli
+ 151               	 ;  0 "" 2
+ 152               	.LVL10:
+ 153               	/* #NOAPP */
+ 154               	.LBE39:
+ 155               	.LBE38:
+ 105:tmk_core/common/avr/timer.c ****       t = timer_count;
+ 156               		.loc 1 105 0
+ 157 0004 6091 0000 		lds r22,timer_count
+ 158 0008 7091 0000 		lds r23,timer_count+1
+ 159 000c 8091 0000 		lds r24,timer_count+2
+ 160 0010 9091 0000 		lds r25,timer_count+3
+ 161               	.LVL11:
+ 162               	.LBB40:
+ 163               	.LBB41:
+  70:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     __asm__ volatile ("" ::: "memory");
+ 164               		.loc 2 70 0
+ 165 0014 2FBF      		out __SREG__,r18
+ 166               		.loc 2 71 0
+ 167               	.LVL12:
+ 168               	.LBE41:
+ 169               	.LBE40:
+ 170               	.LBE37:
+ 106:tmk_core/common/avr/timer.c ****     }
+ 107:tmk_core/common/avr/timer.c **** 
+ 108:tmk_core/common/avr/timer.c ****     return t;
+ 109:tmk_core/common/avr/timer.c **** }
+ 171               		.loc 1 109 0
+ 172 0016 0895      		ret
+ 173               		.cfi_endproc
+ 174               	.LFE8:
+ 176               		.section	.text.timer_elapsed,"ax",@progbits
+ 177               	.global	timer_elapsed
+ 179               	timer_elapsed:
+ 180               	.LFB9:
+ 110:tmk_core/common/avr/timer.c **** 
+ 111:tmk_core/common/avr/timer.c **** /** \brief timer elapsed
+ 112:tmk_core/common/avr/timer.c ****  *
+ 113:tmk_core/common/avr/timer.c ****  * FIXME: needs doc
+ 114:tmk_core/common/avr/timer.c ****  */
+ 115:tmk_core/common/avr/timer.c **** inline
+ 116:tmk_core/common/avr/timer.c **** uint16_t timer_elapsed(uint16_t last)
+ 117:tmk_core/common/avr/timer.c **** {
+ 181               		.loc 1 117 0
+ 182               		.cfi_startproc
+ 183               	.LVL13:
+ 184 0000 CF92      		push r12
+ 185               	.LCFI0:
+ 186               		.cfi_def_cfa_offset 3
+ 187               		.cfi_offset 12, -2
+ 188 0002 DF92      		push r13
+ 189               	.LCFI1:
+ 190               		.cfi_def_cfa_offset 4
+ 191               		.cfi_offset 13, -3
+ 192 0004 EF92      		push r14
+ 193               	.LCFI2:
+ 194               		.cfi_def_cfa_offset 5
+ 195               		.cfi_offset 14, -4
+ 196 0006 FF92      		push r15
+ 197               	.LCFI3:
+ 198               		.cfi_def_cfa_offset 6
+ 199               		.cfi_offset 15, -5
+ 200 0008 0F93      		push r16
+ 201               	.LCFI4:
+ 202               		.cfi_def_cfa_offset 7
+ 203               		.cfi_offset 16, -6
+ 204 000a 1F93      		push r17
+ 205               	.LCFI5:
+ 206               		.cfi_def_cfa_offset 8
+ 207               		.cfi_offset 17, -7
+ 208               	/* prologue: function */
+ 209               	/* frame size = 0 */
+ 210               	/* stack size = 6 */
+ 211               	.L__stack_usage = 6
+ 212               	.LBB42:
+ 118:tmk_core/common/avr/timer.c ****     uint32_t t;
+ 119:tmk_core/common/avr/timer.c **** 
+ 120:tmk_core/common/avr/timer.c ****     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+ 213               		.loc 1 120 0
+ 214 000c 2FB7      		in r18,__SREG__
+ 215               	.LVL14:
+ 216               	.LBB43:
+ 217               	.LBB44:
+  50:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     return 1;
+ 218               		.loc 2 50 0
+ 219               	/* #APP */
+ 220               	 ;  50 "c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h" 1
+ 221 000e F894      		cli
+ 222               	 ;  0 "" 2
+ 223               	.LVL15:
+ 224               	/* #NOAPP */
+ 225               	.LBE44:
+ 226               	.LBE43:
+ 121:tmk_core/common/avr/timer.c ****       t = timer_count;
+ 227               		.loc 1 121 0
+ 228 0010 4091 0000 		lds r20,timer_count
+ 229 0014 5091 0000 		lds r21,timer_count+1
+ 230 0018 6091 0000 		lds r22,timer_count+2
+ 231 001c 7091 0000 		lds r23,timer_count+3
+ 232               	.LVL16:
+ 233               	.LBB45:
+ 234               	.LBB46:
+  70:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     __asm__ volatile ("" ::: "memory");
+ 235               		.loc 2 70 0
+ 236 0020 2FBF      		out __SREG__,r18
+ 237               		.loc 2 71 0
+ 238               	.LVL17:
+ 239               	.LBE46:
+ 240               	.LBE45:
+ 241               	.LBE42:
+ 122:tmk_core/common/avr/timer.c ****     }
+ 123:tmk_core/common/avr/timer.c **** 
+ 124:tmk_core/common/avr/timer.c ****     return TIMER_DIFF_16((t & 0xFFFF), last);
+ 242               		.loc 1 124 0
+ 243 0022 6A01      		movw r12,r20
+ 244 0024 7B01      		movw r14,r22
+ 245 0026 EE24      		clr r14
+ 246 0028 FF24      		clr r15
+ 247 002a 8C01      		movw r16,r24
+ 248 002c 20E0      		ldi r18,0
+ 249 002e 30E0      		ldi r19,0
+ 250 0030 C016      		cp r12,r16
+ 251 0032 D106      		cpc r13,r17
+ 252 0034 E206      		cpc r14,r18
+ 253 0036 F306      		cpc r15,r19
+ 254 0038 00F4      		brsh .L8
+ 255               		.loc 1 124 0 is_stmt 0 discriminator 2
+ 256 003a 4150      		subi r20,1
+ 257 003c 5109      		sbc r21,__zero_reg__
+ 258               	.LVL18:
+ 259               	.L8:
+ 260 003e 9A01      		movw r18,r20
+ 261 0040 281B      		sub r18,r24
+ 262 0042 390B      		sbc r19,r25
+ 263 0044 C901      		movw r24,r18
+ 264               	.LVL19:
+ 265               	/* epilogue start */
+ 125:tmk_core/common/avr/timer.c **** }
+ 266               		.loc 1 125 0 is_stmt 1 discriminator 2
+ 267 0046 1F91      		pop r17
+ 268 0048 0F91      		pop r16
+ 269               	.LVL20:
+ 270 004a FF90      		pop r15
+ 271 004c EF90      		pop r14
+ 272 004e DF90      		pop r13
+ 273 0050 CF90      		pop r12
+ 274 0052 0895      		ret
+ 275               		.cfi_endproc
+ 276               	.LFE9:
+ 278               		.section	.text.timer_elapsed32,"ax",@progbits
+ 279               	.global	timer_elapsed32
+ 281               	timer_elapsed32:
+ 282               	.LFB10:
+ 126:tmk_core/common/avr/timer.c **** 
+ 127:tmk_core/common/avr/timer.c **** /** \brief timer elapsed32
+ 128:tmk_core/common/avr/timer.c ****  *
+ 129:tmk_core/common/avr/timer.c ****  * FIXME: needs doc
+ 130:tmk_core/common/avr/timer.c ****  */
+ 131:tmk_core/common/avr/timer.c **** inline
+ 132:tmk_core/common/avr/timer.c **** uint32_t timer_elapsed32(uint32_t last)
+ 133:tmk_core/common/avr/timer.c **** {
+ 283               		.loc 1 133 0
+ 284               		.cfi_startproc
+ 285               	.LVL21:
+ 286 0000 CF92      		push r12
+ 287               	.LCFI6:
+ 288               		.cfi_def_cfa_offset 3
+ 289               		.cfi_offset 12, -2
+ 290 0002 DF92      		push r13
+ 291               	.LCFI7:
+ 292               		.cfi_def_cfa_offset 4
+ 293               		.cfi_offset 13, -3
+ 294 0004 EF92      		push r14
+ 295               	.LCFI8:
+ 296               		.cfi_def_cfa_offset 5
+ 297               		.cfi_offset 14, -4
+ 298 0006 FF92      		push r15
+ 299               	.LCFI9:
+ 300               		.cfi_def_cfa_offset 6
+ 301               		.cfi_offset 15, -5
+ 302 0008 0F93      		push r16
+ 303               	.LCFI10:
+ 304               		.cfi_def_cfa_offset 7
+ 305               		.cfi_offset 16, -6
+ 306 000a 1F93      		push r17
+ 307               	.LCFI11:
+ 308               		.cfi_def_cfa_offset 8
+ 309               		.cfi_offset 17, -7
+ 310               	/* prologue: function */
+ 311               	/* frame size = 0 */
+ 312               	/* stack size = 6 */
+ 313               	.L__stack_usage = 6
+ 314               	.LBB47:
+ 134:tmk_core/common/avr/timer.c ****     uint32_t t;
+ 135:tmk_core/common/avr/timer.c **** 
+ 136:tmk_core/common/avr/timer.c ****     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+ 315               		.loc 1 136 0
+ 316 000c 2FB7      		in r18,__SREG__
+ 317               	.LVL22:
+ 318               	.LBB48:
+ 319               	.LBB49:
+  50:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     return 1;
+ 320               		.loc 2 50 0
+ 321               	/* #APP */
+ 322               	 ;  50 "c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h" 1
+ 323 000e F894      		cli
+ 324               	 ;  0 "" 2
+ 325               	.LVL23:
+ 326               	/* #NOAPP */
+ 327               	.LBE49:
+ 328               	.LBE48:
+ 137:tmk_core/common/avr/timer.c ****       t = timer_count;
+ 329               		.loc 1 137 0
+ 330 0010 C090 0000 		lds r12,timer_count
+ 331 0014 D090 0000 		lds r13,timer_count+1
+ 332 0018 E090 0000 		lds r14,timer_count+2
+ 333 001c F090 0000 		lds r15,timer_count+3
+ 334               	.LVL24:
+ 335               	.LBB50:
+ 336               	.LBB51:
+  70:c:\msys64_2\home\egypt2\qmk_utils\avr8-gnu-toolchain\avr\include\util\atomic.h ****     __asm__ volatile ("" ::: "memory");
+ 337               		.loc 2 70 0
+ 338 0020 2FBF      		out __SREG__,r18
+ 339               		.loc 2 71 0
+ 340               	.LVL25:
+ 341 0022 9701      		movw r18,r14
+ 342 0024 8601      		movw r16,r12
+ 343 0026 061B      		sub r16,r22
+ 344 0028 170B      		sbc r17,r23
+ 345 002a 280B      		sbc r18,r24
+ 346 002c 390B      		sbc r19,r25
+ 347               	.LBE51:
+ 348               	.LBE50:
+ 349               	.LBE47:
+ 138:tmk_core/common/avr/timer.c ****     }
+ 139:tmk_core/common/avr/timer.c **** 
+ 140:tmk_core/common/avr/timer.c ****     return TIMER_DIFF_32(t, last);
+ 350               		.loc 1 140 0
+ 351 002e C616      		cp r12,r22
+ 352 0030 D706      		cpc r13,r23
+ 353 0032 E806      		cpc r14,r24
+ 354 0034 F906      		cpc r15,r25
+ 355 0036 00F0      		brlo .L11
+ 356               		.loc 1 140 0 is_stmt 0 discriminator 1
+ 357 0038 C901      		movw r24,r18
+ 358 003a B801      		movw r22,r16
+ 359               	.LVL26:
+ 360 003c 00C0      		rjmp .L12
+ 361               	.LVL27:
+ 362               	.L11:
+ 363               		.loc 1 140 0 discriminator 2
+ 364 003e C901      		movw r24,r18
+ 365 0040 B801      		movw r22,r16
+ 366               	.LVL28:
+ 367 0042 6150      		subi r22,1
+ 368 0044 7109      		sbc r23,__zero_reg__
+ 369 0046 8109      		sbc r24,__zero_reg__
+ 370 0048 9109      		sbc r25,__zero_reg__
+ 371               	.L12:
+ 372               	/* epilogue start */
+ 141:tmk_core/common/avr/timer.c **** }
+ 373               		.loc 1 141 0 is_stmt 1 discriminator 4
+ 374 004a 1F91      		pop r17
+ 375 004c 0F91      		pop r16
+ 376 004e FF90      		pop r15
+ 377 0050 EF90      		pop r14
+ 378 0052 DF90      		pop r13
+ 379 0054 CF90      		pop r12
+ 380               	.LVL29:
+ 381 0056 0895      		ret
+ 382               		.cfi_endproc
+ 383               	.LFE10:
+ 385               		.section	.text.__vector_21,"ax",@progbits
+ 386               	.global	__vector_21
+ 388               	__vector_21:
+ 389               	.LFB11:
+ 142:tmk_core/common/avr/timer.c **** 
+ 143:tmk_core/common/avr/timer.c **** // excecuted once per 1ms.(excess for just timer count?)
+ 144:tmk_core/common/avr/timer.c **** #ifndef __AVR_ATmega32A__
+ 145:tmk_core/common/avr/timer.c **** #define TIMER_INTERRUPT_VECTOR TIMER0_COMPA_vect
+ 146:tmk_core/common/avr/timer.c **** #else
+ 147:tmk_core/common/avr/timer.c **** #define TIMER_INTERRUPT_VECTOR TIMER0_COMP_vect
+ 148:tmk_core/common/avr/timer.c **** #endif
+ 149:tmk_core/common/avr/timer.c **** ISR(TIMER_INTERRUPT_VECTOR, ISR_NOBLOCK)
+ 150:tmk_core/common/avr/timer.c **** {
+ 390               		.loc 1 150 0
+ 391               		.cfi_startproc
+ 392 0000 7894      		sei
+ 393 0002 1F92      		push r1
+ 394               	.LCFI12:
+ 395               		.cfi_def_cfa_offset 3
+ 396               		.cfi_offset 1, -2
+ 397 0004 0F92      		push r0
+ 398               	.LCFI13:
+ 399               		.cfi_def_cfa_offset 4
+ 400               		.cfi_offset 0, -3
+ 401 0006 0FB6      		in r0,__SREG__
+ 402 0008 0F92      		push r0
+ 403 000a 1124      		clr __zero_reg__
+ 404 000c 8F93      		push r24
+ 405               	.LCFI14:
+ 406               		.cfi_def_cfa_offset 5
+ 407               		.cfi_offset 24, -4
+ 408 000e 9F93      		push r25
+ 409               	.LCFI15:
+ 410               		.cfi_def_cfa_offset 6
+ 411               		.cfi_offset 25, -5
+ 412 0010 AF93      		push r26
+ 413               	.LCFI16:
+ 414               		.cfi_def_cfa_offset 7
+ 415               		.cfi_offset 26, -6
+ 416 0012 BF93      		push r27
+ 417               	.LCFI17:
+ 418               		.cfi_def_cfa_offset 8
+ 419               		.cfi_offset 27, -7
+ 420               	/* prologue: Interrupt */
+ 421               	/* frame size = 0 */
+ 422               	/* stack size = 7 */
+ 423               	.L__stack_usage = 7
+ 151:tmk_core/common/avr/timer.c ****     timer_count++;
+ 424               		.loc 1 151 0
+ 425 0014 8091 0000 		lds r24,timer_count
+ 426 0018 9091 0000 		lds r25,timer_count+1
+ 427 001c A091 0000 		lds r26,timer_count+2
+ 428 0020 B091 0000 		lds r27,timer_count+3
+ 429 0024 0196      		adiw r24,1
+ 430 0026 A11D      		adc r26,__zero_reg__
+ 431 0028 B11D      		adc r27,__zero_reg__
+ 432 002a 8093 0000 		sts timer_count,r24
+ 433 002e 9093 0000 		sts timer_count+1,r25
+ 434 0032 A093 0000 		sts timer_count+2,r26
+ 435 0036 B093 0000 		sts timer_count+3,r27
+ 436               	/* epilogue start */
+ 152:tmk_core/common/avr/timer.c **** }
+ 437               		.loc 1 152 0
+ 438 003a BF91      		pop r27
+ 439 003c AF91      		pop r26
+ 440 003e 9F91      		pop r25
+ 441 0040 8F91      		pop r24
+ 442 0042 0F90      		pop r0
+ 443 0044 0FBE      		out __SREG__,r0
+ 444 0046 0F90      		pop r0
+ 445 0048 1F90      		pop r1
+ 446 004a 1895      		reti
+ 447               		.cfi_endproc
+ 448               	.LFE11:
+ 450               		.comm	timer_count,4,1
+ 451               		.text
+ 452               	.Letext0:
+ 453               		.file 3 "c:\\msys64_2\\home\\egypt2\\qmk_utils\\avr8-gnu-toolchain\\avr\\include\\stdint.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 timer.c
+C:\msys64_2\tmp\cchaH6rI.s:2      *ABS*:0000003e __SP_H__
+C:\msys64_2\tmp\cchaH6rI.s:3      *ABS*:0000003d __SP_L__
+C:\msys64_2\tmp\cchaH6rI.s:4      *ABS*:0000003f __SREG__
+C:\msys64_2\tmp\cchaH6rI.s:5      *ABS*:00000000 __tmp_reg__
+C:\msys64_2\tmp\cchaH6rI.s:6      *ABS*:00000001 __zero_reg__
+C:\msys64_2\tmp\cchaH6rI.s:13     .text.timer_init:00000000 timer_init
+C:\msys64_2\tmp\cchaH6rI.s:41     .text.timer_clear:00000000 timer_clear
+                            *COM*:00000004 timer_count
+C:\msys64_2\tmp\cchaH6rI.s:87     .text.timer_read:00000000 timer_read
+C:\msys64_2\tmp\cchaH6rI.s:133    .text.timer_read32:00000000 timer_read32
+C:\msys64_2\tmp\cchaH6rI.s:179    .text.timer_elapsed:00000000 timer_elapsed
+C:\msys64_2\tmp\cchaH6rI.s:281    .text.timer_elapsed32:00000000 timer_elapsed32
+C:\msys64_2\tmp\cchaH6rI.s:388    .text.__vector_21:00000000 __vector_21
+
+UNDEFINED SYMBOLS
+__do_clear_bss

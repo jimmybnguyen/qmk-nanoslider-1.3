@@ -1,0 +1,244 @@
+   1               		.file	"sym_g.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.debounce_init,"ax",@progbits
+  11               	.global	debounce_init
+  13               	debounce_init:
+  14               	.LFB18:
+  15               		.file 1 "quantum/debounce/sym_g.c"
+   1:quantum/debounce/sym_g.c **** /*
+   2:quantum/debounce/sym_g.c **** Copyright 2017 Alex Ong<the.onga@gmail.com>
+   3:quantum/debounce/sym_g.c **** This program is free software: you can redistribute it and/or modify
+   4:quantum/debounce/sym_g.c **** it under the terms of the GNU General Public License as published by
+   5:quantum/debounce/sym_g.c **** the Free Software Foundation, either version 2 of the License, or
+   6:quantum/debounce/sym_g.c **** (at your option) any later version.
+   7:quantum/debounce/sym_g.c **** This program is distributed in the hope that it will be useful,
+   8:quantum/debounce/sym_g.c **** but WITHOUT ANY WARRANTY; without even the implied warranty of
+   9:quantum/debounce/sym_g.c **** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  10:quantum/debounce/sym_g.c **** GNU General Public License for more details.
+  11:quantum/debounce/sym_g.c **** You should have received a copy of the GNU General Public License
+  12:quantum/debounce/sym_g.c **** along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  13:quantum/debounce/sym_g.c **** */
+  14:quantum/debounce/sym_g.c **** 
+  15:quantum/debounce/sym_g.c **** /*
+  16:quantum/debounce/sym_g.c **** Basic global debounce algorithm. Used in 99% of keyboards at time of implementation
+  17:quantum/debounce/sym_g.c **** When no state changes have occured for DEBOUNCE milliseconds, we push the state.
+  18:quantum/debounce/sym_g.c **** */
+  19:quantum/debounce/sym_g.c **** #include "matrix.h"
+  20:quantum/debounce/sym_g.c **** #include "timer.h"
+  21:quantum/debounce/sym_g.c **** #include "quantum.h"
+  22:quantum/debounce/sym_g.c **** #ifndef DEBOUNCE
+  23:quantum/debounce/sym_g.c ****   #define DEBOUNCE 5
+  24:quantum/debounce/sym_g.c **** #endif
+  25:quantum/debounce/sym_g.c **** 
+  26:quantum/debounce/sym_g.c **** void debounce_init(uint8_t num_rows) {}
+  16               		.loc 1 26 0
+  17               		.cfi_startproc
+  18               	.LVL0:
+  19               	/* prologue: function */
+  20               	/* frame size = 0 */
+  21               	/* stack size = 0 */
+  22               	.L__stack_usage = 0
+  23               	/* epilogue start */
+  24               		.loc 1 26 0
+  25 0000 0895      		ret
+  26               		.cfi_endproc
+  27               	.LFE18:
+  29               		.section	.text.debounce,"ax",@progbits
+  30               	.global	debounce
+  32               	debounce:
+  33               	.LFB19:
+  27:quantum/debounce/sym_g.c **** static bool debouncing = false;
+  28:quantum/debounce/sym_g.c **** 
+  29:quantum/debounce/sym_g.c **** #if DEBOUNCE > 0
+  30:quantum/debounce/sym_g.c **** static uint16_t debouncing_time;
+  31:quantum/debounce/sym_g.c **** void debounce(matrix_row_t raw[], matrix_row_t cooked[], uint8_t num_rows, bool changed)
+  32:quantum/debounce/sym_g.c **** {
+  34               		.loc 1 32 0
+  35               		.cfi_startproc
+  36               	.LVL1:
+  37 0000 FF92      		push r15
+  38               	.LCFI0:
+  39               		.cfi_def_cfa_offset 3
+  40               		.cfi_offset 15, -2
+  41 0002 0F93      		push r16
+  42               	.LCFI1:
+  43               		.cfi_def_cfa_offset 4
+  44               		.cfi_offset 16, -3
+  45 0004 1F93      		push r17
+  46               	.LCFI2:
+  47               		.cfi_def_cfa_offset 5
+  48               		.cfi_offset 17, -4
+  49 0006 CF93      		push r28
+  50               	.LCFI3:
+  51               		.cfi_def_cfa_offset 6
+  52               		.cfi_offset 28, -5
+  53 0008 DF93      		push r29
+  54               	.LCFI4:
+  55               		.cfi_def_cfa_offset 7
+  56               		.cfi_offset 29, -6
+  57               	/* prologue: function */
+  58               	/* frame size = 0 */
+  59               	/* stack size = 5 */
+  60               	.L__stack_usage = 5
+  61 000a F82E      		mov r15,r24
+  62 000c 092F      		mov r16,r25
+  63 000e 162F      		mov r17,r22
+  64 0010 D72F      		mov r29,r23
+  65 0012 C42F      		mov r28,r20
+  33:quantum/debounce/sym_g.c ****   if (changed) {
+  66               		.loc 1 33 0
+  67 0014 2223      		tst r18
+  68 0016 01F0      		breq .L3
+  34:quantum/debounce/sym_g.c ****     debouncing = true;
+  69               		.loc 1 34 0
+  70 0018 81E0      		ldi r24,lo8(1)
+  71               	.LVL2:
+  72 001a 8093 0000 		sts debouncing,r24
+  35:quantum/debounce/sym_g.c ****     debouncing_time = timer_read();
+  73               		.loc 1 35 0
+  74 001e 0E94 0000 		call timer_read
+  75               	.LVL3:
+  76 0022 9093 0000 		sts debouncing_time+1,r25
+  77 0026 8093 0000 		sts debouncing_time,r24
+  78               	.L3:
+  36:quantum/debounce/sym_g.c ****   }
+  37:quantum/debounce/sym_g.c **** 
+  38:quantum/debounce/sym_g.c ****   if (debouncing && timer_elapsed(debouncing_time) > DEBOUNCE) {
+  79               		.loc 1 38 0
+  80 002a 8091 0000 		lds r24,debouncing
+  81 002e 8823      		tst r24
+  82 0030 01F0      		breq .L2
+  83               		.loc 1 38 0 is_stmt 0 discriminator 1
+  84 0032 8091 0000 		lds r24,debouncing_time
+  85 0036 9091 0000 		lds r25,debouncing_time+1
+  86 003a 0E94 0000 		call timer_elapsed
+  87               	.LVL4:
+  88 003e 0697      		sbiw r24,6
+  89 0040 00F0      		brlo .L2
+  90 0042 EF2D      		mov r30,r15
+  91 0044 F02F      		mov r31,r16
+  92 0046 A12F      		mov r26,r17
+  93 0048 BD2F      		mov r27,r29
+  94               	.LBB2:
+  39:quantum/debounce/sym_g.c ****     for (int i = 0; i < num_rows; i++) {
+  95               		.loc 1 39 0 is_stmt 1
+  96 004a 90E0      		ldi r25,0
+  97 004c 80E0      		ldi r24,0
+  98 004e D0E0      		ldi r29,0
+  99               	.L7:
+ 100               	.LVL5:
+ 101               		.loc 1 39 0 is_stmt 0 discriminator 1
+ 102 0050 8C17      		cp r24,r28
+ 103 0052 9D07      		cpc r25,r29
+ 104 0054 04F0      		brlt .L8
+ 105               	.LBE2:
+  40:quantum/debounce/sym_g.c ****       cooked[i] = raw[i];
+  41:quantum/debounce/sym_g.c ****     }
+  42:quantum/debounce/sym_g.c ****     debouncing = false;
+ 106               		.loc 1 42 0 is_stmt 1
+ 107 0056 1092 0000 		sts debouncing,__zero_reg__
+ 108               	.LVL6:
+ 109               	.L2:
+ 110               	/* epilogue start */
+  43:quantum/debounce/sym_g.c ****   }
+  44:quantum/debounce/sym_g.c **** }
+ 111               		.loc 1 44 0
+ 112 005a DF91      		pop r29
+ 113 005c CF91      		pop r28
+ 114               	.LVL7:
+ 115 005e 1F91      		pop r17
+ 116 0060 0F91      		pop r16
+ 117 0062 FF90      		pop r15
+ 118 0064 0895      		ret
+ 119               	.LVL8:
+ 120               	.L8:
+ 121               	.LBB3:
+  40:quantum/debounce/sym_g.c ****       cooked[i] = raw[i];
+ 122               		.loc 1 40 0 discriminator 3
+ 123 0066 2191      		ld r18,Z+
+ 124 0068 3191      		ld r19,Z+
+ 125 006a 2D93      		st X+,r18
+ 126 006c 3D93      		st X+,r19
+  39:quantum/debounce/sym_g.c ****       cooked[i] = raw[i];
+ 127               		.loc 1 39 0 discriminator 3
+ 128 006e 0196      		adiw r24,1
+ 129               	.LVL9:
+ 130 0070 00C0      		rjmp .L7
+ 131               	.LBE3:
+ 132               		.cfi_endproc
+ 133               	.LFE19:
+ 135               		.section	.text.debounce_active,"ax",@progbits
+ 136               	.global	debounce_active
+ 138               	debounce_active:
+ 139               	.LFB20:
+  45:quantum/debounce/sym_g.c **** #else //no debouncing.
+  46:quantum/debounce/sym_g.c **** void debounce(matrix_row_t raw[], matrix_row_t cooked[], uint8_t num_rows, bool changed)
+  47:quantum/debounce/sym_g.c **** {
+  48:quantum/debounce/sym_g.c ****   for (int i = 0; i < num_rows; i++) {
+  49:quantum/debounce/sym_g.c ****     cooked[i] = raw[i];
+  50:quantum/debounce/sym_g.c ****   }
+  51:quantum/debounce/sym_g.c **** }
+  52:quantum/debounce/sym_g.c **** #endif
+  53:quantum/debounce/sym_g.c **** 
+  54:quantum/debounce/sym_g.c **** bool debounce_active(void) {
+ 140               		.loc 1 54 0
+ 141               		.cfi_startproc
+ 142               	/* prologue: function */
+ 143               	/* frame size = 0 */
+ 144               	/* stack size = 0 */
+ 145               	.L__stack_usage = 0
+  55:quantum/debounce/sym_g.c ****   return debouncing;
+  56:quantum/debounce/sym_g.c **** }
+ 146               		.loc 1 56 0
+ 147 0000 8091 0000 		lds r24,debouncing
+ 148               	/* epilogue start */
+ 149 0004 0895      		ret
+ 150               		.cfi_endproc
+ 151               	.LFE20:
+ 153               		.section	.bss.debouncing_time,"aw",@nobits
+ 156               	debouncing_time:
+ 157 0000 0000      		.zero	2
+ 158               		.section	.bss.debouncing,"aw",@nobits
+ 161               	debouncing:
+ 162 0000 00        		.zero	1
+ 163               		.text
+ 164               	.Letext0:
+ 165               		.file 2 "/usr/local/Cellar/avr-gcc/7.2.0/avr/include/stdint.h"
+ 166               		.file 3 "tmk_core/common/matrix.h"
+ 167               		.file 4 "/usr/local/Cellar/avr-gcc/7.2.0/lib/avr-gcc/7/gcc/avr/7.2.0/include/stddef.h"
+ 168               		.file 5 "tmk_core/common/timer.h"
+ 169               		.file 6 "tmk_core/common/action.h"
+ 170               		.file 7 "tmk_core/common/report.h"
+ 171               		.file 8 "tmk_core/common/host.h"
+ 172               		.file 9 "tmk_core/common/avr/xprintf.h"
+ 173               		.file 10 "tmk_core/common/debug.h"
+ 174               		.file 11 "quantum/keycode_config.h"
+ 175               		.file 12 "quantum/keymap.h"
+ 176               		.file 13 "tmk_core/common/action_layer.h"
+ 177               		.file 14 "tmk_core/common/action_util.h"
+ 178               		.file 15 "/usr/local/Cellar/avr-gcc/7.2.0/avr/include/stdlib.h"
+ 179               		.file 16 "quantum/quantum.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 sym_g.c
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccTOvznV.s:2      *ABS*:000000000000003e __SP_H__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccTOvznV.s:3      *ABS*:000000000000003d __SP_L__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccTOvznV.s:4      *ABS*:000000000000003f __SREG__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccTOvznV.s:5      *ABS*:0000000000000000 __tmp_reg__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccTOvznV.s:6      *ABS*:0000000000000001 __zero_reg__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccTOvznV.s:13     .text.debounce_init:0000000000000000 debounce_init
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccTOvznV.s:32     .text.debounce:0000000000000000 debounce
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccTOvznV.s:161    .bss.debouncing:0000000000000000 debouncing
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccTOvznV.s:156    .bss.debouncing_time:0000000000000000 debouncing_time
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccTOvznV.s:138    .text.debounce_active:0000000000000000 debounce_active
+
+UNDEFINED SYMBOLS
+timer_read
+timer_elapsed
+__do_clear_bss

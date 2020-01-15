@@ -1,0 +1,866 @@
+   1               		.file	"ws2812.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.ws2812_sendarray_mask,"ax",@progbits
+  11               	.global	ws2812_sendarray_mask
+  13               	ws2812_sendarray_mask:
+  14               	.LFB10:
+  15               		.file 1 "drivers/avr/ws2812.c"
+   1:drivers/avr/ws2812.c **** /*
+   2:drivers/avr/ws2812.c **** * light weight WS2812 lib V2.0b
+   3:drivers/avr/ws2812.c **** *
+   4:drivers/avr/ws2812.c **** * Controls WS2811/WS2812/WS2812B RGB-LEDs
+   5:drivers/avr/ws2812.c **** * Author: Tim (cpldcpu@gmail.com)
+   6:drivers/avr/ws2812.c **** *
+   7:drivers/avr/ws2812.c **** * Jan 18th, 2014  v2.0b Initial Version
+   8:drivers/avr/ws2812.c **** * Nov 29th, 2015  v2.3  Added SK6812RGBW support
+   9:drivers/avr/ws2812.c **** *
+  10:drivers/avr/ws2812.c **** * This program is free software: you can redistribute it and/or modify
+  11:drivers/avr/ws2812.c **** * it under the terms of the GNU General Public License as published by
+  12:drivers/avr/ws2812.c **** * the Free Software Foundation, either version 2 of the License, or
+  13:drivers/avr/ws2812.c **** * (at your option) any later version.
+  14:drivers/avr/ws2812.c **** *
+  15:drivers/avr/ws2812.c **** * This program is distributed in the hope that it will be useful,
+  16:drivers/avr/ws2812.c **** * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  17:drivers/avr/ws2812.c **** * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  18:drivers/avr/ws2812.c **** * GNU General Public License for more details.
+  19:drivers/avr/ws2812.c **** *
+  20:drivers/avr/ws2812.c **** * You should have received a copy of the GNU General Public License
+  21:drivers/avr/ws2812.c **** * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  22:drivers/avr/ws2812.c **** */
+  23:drivers/avr/ws2812.c **** 
+  24:drivers/avr/ws2812.c **** #include "ws2812.h"
+  25:drivers/avr/ws2812.c **** #include <avr/interrupt.h>
+  26:drivers/avr/ws2812.c **** #include <avr/io.h>
+  27:drivers/avr/ws2812.c **** #include <util/delay.h>
+  28:drivers/avr/ws2812.c **** #include "debug.h"
+  29:drivers/avr/ws2812.c **** 
+  30:drivers/avr/ws2812.c **** #if !defined(LED_ARRAY) && defined(RGB_MATRIX_ENABLE)
+  31:drivers/avr/ws2812.c **** // LED color buffer
+  32:drivers/avr/ws2812.c **** LED_TYPE led[DRIVER_LED_TOTAL];
+  33:drivers/avr/ws2812.c ****   #define LED_ARRAY led
+  34:drivers/avr/ws2812.c **** #endif
+  35:drivers/avr/ws2812.c **** 
+  36:drivers/avr/ws2812.c **** #ifdef RGBW_BB_TWI
+  37:drivers/avr/ws2812.c **** 
+  38:drivers/avr/ws2812.c **** // Port for the I2C
+  39:drivers/avr/ws2812.c **** #define I2C_DDR DDRD
+  40:drivers/avr/ws2812.c **** #define I2C_PIN PIND
+  41:drivers/avr/ws2812.c **** #define I2C_PORT PORTD
+  42:drivers/avr/ws2812.c **** 
+  43:drivers/avr/ws2812.c **** // Pins to be used in the bit banging
+  44:drivers/avr/ws2812.c **** #define I2C_CLK 0
+  45:drivers/avr/ws2812.c **** #define I2C_DAT 1
+  46:drivers/avr/ws2812.c **** 
+  47:drivers/avr/ws2812.c **** #define I2C_DATA_HI()\
+  48:drivers/avr/ws2812.c **** I2C_DDR &= ~ (1 << I2C_DAT);\
+  49:drivers/avr/ws2812.c **** I2C_PORT |= (1 << I2C_DAT);
+  50:drivers/avr/ws2812.c **** #define I2C_DATA_LO()\
+  51:drivers/avr/ws2812.c **** I2C_DDR |= (1 << I2C_DAT);\
+  52:drivers/avr/ws2812.c **** I2C_PORT &= ~ (1 << I2C_DAT);
+  53:drivers/avr/ws2812.c **** 
+  54:drivers/avr/ws2812.c **** #define I2C_CLOCK_HI()\
+  55:drivers/avr/ws2812.c **** I2C_DDR &= ~ (1 << I2C_CLK);\
+  56:drivers/avr/ws2812.c **** I2C_PORT |= (1 << I2C_CLK);
+  57:drivers/avr/ws2812.c **** #define I2C_CLOCK_LO()\
+  58:drivers/avr/ws2812.c **** I2C_DDR |= (1 << I2C_CLK);\
+  59:drivers/avr/ws2812.c **** I2C_PORT &= ~ (1 << I2C_CLK);
+  60:drivers/avr/ws2812.c **** 
+  61:drivers/avr/ws2812.c **** #define I2C_DELAY 1
+  62:drivers/avr/ws2812.c **** 
+  63:drivers/avr/ws2812.c **** void I2C_WriteBit(unsigned char c)
+  64:drivers/avr/ws2812.c **** {
+  65:drivers/avr/ws2812.c ****     if (c > 0)
+  66:drivers/avr/ws2812.c ****     {
+  67:drivers/avr/ws2812.c ****         I2C_DATA_HI();
+  68:drivers/avr/ws2812.c ****     }
+  69:drivers/avr/ws2812.c ****     else
+  70:drivers/avr/ws2812.c ****     {
+  71:drivers/avr/ws2812.c ****         I2C_DATA_LO();
+  72:drivers/avr/ws2812.c ****     }
+  73:drivers/avr/ws2812.c **** 
+  74:drivers/avr/ws2812.c ****     I2C_CLOCK_HI();
+  75:drivers/avr/ws2812.c ****     _delay_us(I2C_DELAY);
+  76:drivers/avr/ws2812.c **** 
+  77:drivers/avr/ws2812.c ****     I2C_CLOCK_LO();
+  78:drivers/avr/ws2812.c ****     _delay_us(I2C_DELAY);
+  79:drivers/avr/ws2812.c **** 
+  80:drivers/avr/ws2812.c ****     if (c > 0)
+  81:drivers/avr/ws2812.c ****     {
+  82:drivers/avr/ws2812.c ****         I2C_DATA_LO();
+  83:drivers/avr/ws2812.c ****     }
+  84:drivers/avr/ws2812.c **** 
+  85:drivers/avr/ws2812.c ****     _delay_us(I2C_DELAY);
+  86:drivers/avr/ws2812.c **** }
+  87:drivers/avr/ws2812.c **** 
+  88:drivers/avr/ws2812.c **** // Inits bitbanging port, must be called before using the functions below
+  89:drivers/avr/ws2812.c **** //
+  90:drivers/avr/ws2812.c **** void I2C_Init(void)
+  91:drivers/avr/ws2812.c **** {
+  92:drivers/avr/ws2812.c ****     I2C_PORT &= ~ ((1 << I2C_DAT) | (1 << I2C_CLK));
+  93:drivers/avr/ws2812.c **** 
+  94:drivers/avr/ws2812.c ****     I2C_CLOCK_HI();
+  95:drivers/avr/ws2812.c ****     I2C_DATA_HI();
+  96:drivers/avr/ws2812.c **** 
+  97:drivers/avr/ws2812.c ****     _delay_us(I2C_DELAY);
+  98:drivers/avr/ws2812.c **** }
+  99:drivers/avr/ws2812.c **** 
+ 100:drivers/avr/ws2812.c **** // Send a START Condition
+ 101:drivers/avr/ws2812.c **** //
+ 102:drivers/avr/ws2812.c **** void I2C_Start(void)
+ 103:drivers/avr/ws2812.c **** {
+ 104:drivers/avr/ws2812.c ****     // set both to high at the same time
+ 105:drivers/avr/ws2812.c ****     I2C_DDR &= ~ ((1 << I2C_DAT) | (1 << I2C_CLK));
+ 106:drivers/avr/ws2812.c ****     _delay_us(I2C_DELAY);
+ 107:drivers/avr/ws2812.c **** 
+ 108:drivers/avr/ws2812.c ****     I2C_DATA_LO();
+ 109:drivers/avr/ws2812.c ****     _delay_us(I2C_DELAY);
+ 110:drivers/avr/ws2812.c **** 
+ 111:drivers/avr/ws2812.c ****     I2C_CLOCK_LO();
+ 112:drivers/avr/ws2812.c ****     _delay_us(I2C_DELAY);
+ 113:drivers/avr/ws2812.c **** }
+ 114:drivers/avr/ws2812.c **** 
+ 115:drivers/avr/ws2812.c **** // Send a STOP Condition
+ 116:drivers/avr/ws2812.c **** //
+ 117:drivers/avr/ws2812.c **** void I2C_Stop(void)
+ 118:drivers/avr/ws2812.c **** {
+ 119:drivers/avr/ws2812.c ****     I2C_CLOCK_HI();
+ 120:drivers/avr/ws2812.c ****     _delay_us(I2C_DELAY);
+ 121:drivers/avr/ws2812.c **** 
+ 122:drivers/avr/ws2812.c ****     I2C_DATA_HI();
+ 123:drivers/avr/ws2812.c ****     _delay_us(I2C_DELAY);
+ 124:drivers/avr/ws2812.c **** }
+ 125:drivers/avr/ws2812.c **** 
+ 126:drivers/avr/ws2812.c **** // write a byte to the I2C slave device
+ 127:drivers/avr/ws2812.c **** //
+ 128:drivers/avr/ws2812.c **** unsigned char I2C_Write(unsigned char c)
+ 129:drivers/avr/ws2812.c **** {
+ 130:drivers/avr/ws2812.c ****     for (char i = 0; i < 8; i++)
+ 131:drivers/avr/ws2812.c ****     {
+ 132:drivers/avr/ws2812.c ****         I2C_WriteBit(c & 128);
+ 133:drivers/avr/ws2812.c **** 
+ 134:drivers/avr/ws2812.c ****         c <<= 1;
+ 135:drivers/avr/ws2812.c ****     }
+ 136:drivers/avr/ws2812.c **** 
+ 137:drivers/avr/ws2812.c **** 
+ 138:drivers/avr/ws2812.c ****     I2C_WriteBit(0);
+ 139:drivers/avr/ws2812.c ****     _delay_us(I2C_DELAY);
+ 140:drivers/avr/ws2812.c ****     _delay_us(I2C_DELAY);
+ 141:drivers/avr/ws2812.c **** 
+ 142:drivers/avr/ws2812.c ****     // _delay_us(I2C_DELAY);
+ 143:drivers/avr/ws2812.c ****     //return I2C_ReadBit();
+ 144:drivers/avr/ws2812.c ****     return 0;
+ 145:drivers/avr/ws2812.c **** }
+ 146:drivers/avr/ws2812.c **** 
+ 147:drivers/avr/ws2812.c **** 
+ 148:drivers/avr/ws2812.c **** #endif
+ 149:drivers/avr/ws2812.c **** 
+ 150:drivers/avr/ws2812.c **** #ifdef RGB_MATRIX_ENABLE
+ 151:drivers/avr/ws2812.c **** // Set an led in the buffer to a color
+ 152:drivers/avr/ws2812.c **** void inline ws2812_setled(int i, uint8_t r, uint8_t g, uint8_t b)
+ 153:drivers/avr/ws2812.c **** {
+ 154:drivers/avr/ws2812.c ****     led[i].r = r;
+ 155:drivers/avr/ws2812.c ****     led[i].g = g;
+ 156:drivers/avr/ws2812.c ****     led[i].b = b;
+ 157:drivers/avr/ws2812.c **** }
+ 158:drivers/avr/ws2812.c **** 
+ 159:drivers/avr/ws2812.c **** void ws2812_setled_all  (uint8_t r, uint8_t g, uint8_t b)
+ 160:drivers/avr/ws2812.c **** {
+ 161:drivers/avr/ws2812.c ****   for (int i = 0; i < sizeof(led)/sizeof(led[0]); i++) {
+ 162:drivers/avr/ws2812.c ****     led[i].r = r;
+ 163:drivers/avr/ws2812.c ****     led[i].g = g;
+ 164:drivers/avr/ws2812.c ****     led[i].b = b;
+ 165:drivers/avr/ws2812.c ****   }
+ 166:drivers/avr/ws2812.c **** }
+ 167:drivers/avr/ws2812.c **** #endif
+ 168:drivers/avr/ws2812.c **** 
+ 169:drivers/avr/ws2812.c **** // Setleds for standard RGB
+ 170:drivers/avr/ws2812.c **** void inline ws2812_setleds(LED_TYPE *ledarray, uint16_t leds)
+ 171:drivers/avr/ws2812.c **** {
+ 172:drivers/avr/ws2812.c ****    // ws2812_setleds_pin(ledarray,leds, _BV(ws2812_pin));
+ 173:drivers/avr/ws2812.c ****    ws2812_setleds_pin(ledarray,leds, _BV(RGB_DI_PIN & 0xF));
+ 174:drivers/avr/ws2812.c **** }
+ 175:drivers/avr/ws2812.c **** 
+ 176:drivers/avr/ws2812.c **** void inline ws2812_setleds_pin(LED_TYPE *ledarray, uint16_t leds, uint8_t pinmask)
+ 177:drivers/avr/ws2812.c **** {
+ 178:drivers/avr/ws2812.c ****   // ws2812_DDRREG |= pinmask; // Enable DDR
+ 179:drivers/avr/ws2812.c ****   // new universal format (DDR)
+ 180:drivers/avr/ws2812.c ****   _SFR_IO8((RGB_DI_PIN >> 4) + 1) |= pinmask;
+ 181:drivers/avr/ws2812.c **** 
+ 182:drivers/avr/ws2812.c ****   ws2812_sendarray_mask((uint8_t*)ledarray,leds+leds+leds,pinmask);
+ 183:drivers/avr/ws2812.c ****   _delay_us(50);
+ 184:drivers/avr/ws2812.c **** }
+ 185:drivers/avr/ws2812.c **** 
+ 186:drivers/avr/ws2812.c **** // Setleds for SK6812RGBW
+ 187:drivers/avr/ws2812.c **** void inline ws2812_setleds_rgbw(LED_TYPE *ledarray, uint16_t leds)
+ 188:drivers/avr/ws2812.c **** {
+ 189:drivers/avr/ws2812.c **** 
+ 190:drivers/avr/ws2812.c ****   #ifdef RGBW_BB_TWI
+ 191:drivers/avr/ws2812.c ****     uint8_t sreg_prev, twcr_prev;
+ 192:drivers/avr/ws2812.c ****     sreg_prev=SREG;
+ 193:drivers/avr/ws2812.c ****     twcr_prev=TWCR;
+ 194:drivers/avr/ws2812.c ****     cli();
+ 195:drivers/avr/ws2812.c ****     TWCR &= ~(1<<TWEN);
+ 196:drivers/avr/ws2812.c ****     I2C_Init();
+ 197:drivers/avr/ws2812.c ****     I2C_Start();
+ 198:drivers/avr/ws2812.c ****     I2C_Write(0x84);
+ 199:drivers/avr/ws2812.c ****     uint16_t datlen = leds<<2;
+ 200:drivers/avr/ws2812.c ****     uint8_t curbyte;
+ 201:drivers/avr/ws2812.c ****     uint8_t * data = (uint8_t*)ledarray;
+ 202:drivers/avr/ws2812.c ****     while (datlen--) {
+ 203:drivers/avr/ws2812.c ****       curbyte=*data++;
+ 204:drivers/avr/ws2812.c ****       I2C_Write(curbyte);
+ 205:drivers/avr/ws2812.c ****     }
+ 206:drivers/avr/ws2812.c ****     I2C_Stop();
+ 207:drivers/avr/ws2812.c ****     SREG=sreg_prev;
+ 208:drivers/avr/ws2812.c ****     TWCR=twcr_prev;
+ 209:drivers/avr/ws2812.c ****   #endif
+ 210:drivers/avr/ws2812.c **** 
+ 211:drivers/avr/ws2812.c **** 
+ 212:drivers/avr/ws2812.c ****   // ws2812_DDRREG |= _BV(ws2812_pin); // Enable DDR
+ 213:drivers/avr/ws2812.c ****   // new universal format (DDR)
+ 214:drivers/avr/ws2812.c ****   _SFR_IO8((RGB_DI_PIN >> 4) + 1) |= _BV(RGB_DI_PIN & 0xF);
+ 215:drivers/avr/ws2812.c **** 
+ 216:drivers/avr/ws2812.c ****   ws2812_sendarray_mask((uint8_t*)ledarray,leds<<2,_BV(RGB_DI_PIN & 0xF));
+ 217:drivers/avr/ws2812.c **** 
+ 218:drivers/avr/ws2812.c **** 
+ 219:drivers/avr/ws2812.c ****   #ifndef RGBW_BB_TWI
+ 220:drivers/avr/ws2812.c ****     _delay_us(80);
+ 221:drivers/avr/ws2812.c ****   #endif
+ 222:drivers/avr/ws2812.c **** }
+ 223:drivers/avr/ws2812.c **** 
+ 224:drivers/avr/ws2812.c **** void ws2812_sendarray(uint8_t *data,uint16_t datlen)
+ 225:drivers/avr/ws2812.c **** {
+ 226:drivers/avr/ws2812.c ****   ws2812_sendarray_mask(data,datlen,_BV(RGB_DI_PIN & 0xF));
+ 227:drivers/avr/ws2812.c **** }
+ 228:drivers/avr/ws2812.c **** 
+ 229:drivers/avr/ws2812.c **** /*
+ 230:drivers/avr/ws2812.c ****   This routine writes an array of bytes with RGB values to the Dataout pin
+ 231:drivers/avr/ws2812.c ****   using the fast 800kHz clockless WS2811/2812 protocol.
+ 232:drivers/avr/ws2812.c **** */
+ 233:drivers/avr/ws2812.c **** 
+ 234:drivers/avr/ws2812.c **** // Timing in ns
+ 235:drivers/avr/ws2812.c **** #define w_zeropulse   350
+ 236:drivers/avr/ws2812.c **** #define w_onepulse    900
+ 237:drivers/avr/ws2812.c **** #define w_totalperiod 1250
+ 238:drivers/avr/ws2812.c **** 
+ 239:drivers/avr/ws2812.c **** // Fixed cycles used by the inner loop
+ 240:drivers/avr/ws2812.c **** #define w_fixedlow    2
+ 241:drivers/avr/ws2812.c **** #define w_fixedhigh   4
+ 242:drivers/avr/ws2812.c **** #define w_fixedtotal  8
+ 243:drivers/avr/ws2812.c **** 
+ 244:drivers/avr/ws2812.c **** // Insert NOPs to match the timing, if possible
+ 245:drivers/avr/ws2812.c **** #define w_zerocycles    (((F_CPU/1000)*w_zeropulse          )/1000000)
+ 246:drivers/avr/ws2812.c **** #define w_onecycles     (((F_CPU/1000)*w_onepulse    +500000)/1000000)
+ 247:drivers/avr/ws2812.c **** #define w_totalcycles   (((F_CPU/1000)*w_totalperiod +500000)/1000000)
+ 248:drivers/avr/ws2812.c **** 
+ 249:drivers/avr/ws2812.c **** // w1 - nops between rising edge and falling edge - low
+ 250:drivers/avr/ws2812.c **** #define w1 (w_zerocycles-w_fixedlow)
+ 251:drivers/avr/ws2812.c **** // w2   nops between fe low and fe high
+ 252:drivers/avr/ws2812.c **** #define w2 (w_onecycles-w_fixedhigh-w1)
+ 253:drivers/avr/ws2812.c **** // w3   nops to complete loop
+ 254:drivers/avr/ws2812.c **** #define w3 (w_totalcycles-w_fixedtotal-w1-w2)
+ 255:drivers/avr/ws2812.c **** 
+ 256:drivers/avr/ws2812.c **** #if w1>0
+ 257:drivers/avr/ws2812.c ****   #define w1_nops w1
+ 258:drivers/avr/ws2812.c **** #else
+ 259:drivers/avr/ws2812.c ****   #define w1_nops  0
+ 260:drivers/avr/ws2812.c **** #endif
+ 261:drivers/avr/ws2812.c **** 
+ 262:drivers/avr/ws2812.c **** // The only critical timing parameter is the minimum pulse length of the "0"
+ 263:drivers/avr/ws2812.c **** // Warn or throw error if this timing can not be met with current F_CPU settings.
+ 264:drivers/avr/ws2812.c **** #define w_lowtime ((w1_nops+w_fixedlow)*1000000)/(F_CPU/1000)
+ 265:drivers/avr/ws2812.c **** #if w_lowtime>550
+ 266:drivers/avr/ws2812.c ****    #error "Light_ws2812: Sorry, the clock speed is too low. Did you set F_CPU correctly?"
+ 267:drivers/avr/ws2812.c **** #elif w_lowtime>450
+ 268:drivers/avr/ws2812.c ****    #warning "Light_ws2812: The timing is critical and may only work on WS2812B, not on WS2812(S)."
+ 269:drivers/avr/ws2812.c ****    #warning "Please consider a higher clockspeed, if possible"
+ 270:drivers/avr/ws2812.c **** #endif
+ 271:drivers/avr/ws2812.c **** 
+ 272:drivers/avr/ws2812.c **** #if w2>0
+ 273:drivers/avr/ws2812.c **** #define w2_nops w2
+ 274:drivers/avr/ws2812.c **** #else
+ 275:drivers/avr/ws2812.c **** #define w2_nops  0
+ 276:drivers/avr/ws2812.c **** #endif
+ 277:drivers/avr/ws2812.c **** 
+ 278:drivers/avr/ws2812.c **** #if w3>0
+ 279:drivers/avr/ws2812.c **** #define w3_nops w3
+ 280:drivers/avr/ws2812.c **** #else
+ 281:drivers/avr/ws2812.c **** #define w3_nops  0
+ 282:drivers/avr/ws2812.c **** #endif
+ 283:drivers/avr/ws2812.c **** 
+ 284:drivers/avr/ws2812.c **** #define w_nop1  "nop      \n\t"
+ 285:drivers/avr/ws2812.c **** #define w_nop2  "rjmp .+0 \n\t"
+ 286:drivers/avr/ws2812.c **** #define w_nop4  w_nop2 w_nop2
+ 287:drivers/avr/ws2812.c **** #define w_nop8  w_nop4 w_nop4
+ 288:drivers/avr/ws2812.c **** #define w_nop16 w_nop8 w_nop8
+ 289:drivers/avr/ws2812.c **** 
+ 290:drivers/avr/ws2812.c **** void inline ws2812_sendarray_mask(uint8_t *data,uint16_t datlen,uint8_t maskhi)
+ 291:drivers/avr/ws2812.c **** {
+  16               		.loc 1 291 0
+  17               		.cfi_startproc
+  18               	.LVL0:
+  19               	/* prologue: function */
+  20               	/* frame size = 0 */
+  21               	/* stack size = 0 */
+  22               	.L__stack_usage = 0
+ 292:drivers/avr/ws2812.c ****   uint8_t curbyte,ctr,masklo;
+ 293:drivers/avr/ws2812.c ****   uint8_t sreg_prev;
+ 294:drivers/avr/ws2812.c **** 
+ 295:drivers/avr/ws2812.c ****   // masklo  =~maskhi&ws2812_PORTREG;
+ 296:drivers/avr/ws2812.c ****   // maskhi |=        ws2812_PORTREG;
+ 297:drivers/avr/ws2812.c ****   masklo  =~maskhi&_SFR_IO8((RGB_DI_PIN >> 4) + 2);
+  23               		.loc 1 297 0
+  24 0000 21B3      		in r18,0x11
+  25 0002 342F      		mov r19,r20
+  26 0004 3095      		com r19
+  27 0006 2323      		and r18,r19
+  28               	.LVL1:
+ 298:drivers/avr/ws2812.c ****   maskhi |=        _SFR_IO8((RGB_DI_PIN >> 4) + 2);
+  29               		.loc 1 298 0
+  30 0008 31B3      		in r19,0x11
+  31 000a 432B      		or r20,r19
+  32               	.LVL2:
+ 299:drivers/avr/ws2812.c ****   sreg_prev=SREG;
+  33               		.loc 1 299 0
+  34 000c 3FB7      		in r19,__SREG__
+  35               	.LVL3:
+ 300:drivers/avr/ws2812.c ****   cli();
+  36               		.loc 1 300 0
+  37               	/* #APP */
+  38               	 ;  300 "drivers/avr/ws2812.c" 1
+  39 000e F894      		cli
+  40               	 ;  0 "" 2
+  41               	/* #NOAPP */
+  42 0010 FC01      		movw r30,r24
+  43 0012 680F      		add r22,r24
+  44 0014 791F      		adc r23,r25
+  45               	.LVL4:
+  46               	.L2:
+ 301:drivers/avr/ws2812.c **** 
+ 302:drivers/avr/ws2812.c ****   while (datlen--) {
+  47               		.loc 1 302 0
+  48 0016 E617      		cp r30,r22
+  49 0018 F707      		cpc r31,r23
+  50 001a 01F0      		breq .L5
+  51               	.LVL5:
+ 303:drivers/avr/ws2812.c ****     curbyte=(*data++);
+  52               		.loc 1 303 0
+  53 001c 8191      		ld r24,Z+
+  54               	.LVL6:
+ 304:drivers/avr/ws2812.c **** 
+ 305:drivers/avr/ws2812.c ****     asm volatile(
+  55               		.loc 1 305 0
+  56               	/* #APP */
+  57               	 ;  305 "drivers/avr/ws2812.c" 1
+  58 001e 98E0      		       ldi   r25,8  
+  59               		loop39:            
+  60 0020 41BB      		       out   17,r20 
+  61 0022 0000      		nop      
+  62 0024 00C0      		rjmp .+0 
+  63 0026 87FF      		       sbrs  r24,7  
+  64 0028 21BB      		       out   17,r18 
+  65 002a 880F      		       lsl   r24    
+  66 002c 0000      		nop      
+  67 002e 00C0      		rjmp .+0 
+  68 0030 00C0      		rjmp .+0 
+  69 0032 00C0      		rjmp .+0 
+  70 0034 21BB      		       out   17,r18 
+  71 0036 00C0      		rjmp .+0 
+  72 0038 9A95      		       dec   r25    
+  73 003a 01F4      		       brne  loop39
+  74               		
+  75               	 ;  0 "" 2
+  76               	.LVL7:
+  77               	/* #NOAPP */
+  78 003c 00C0      		rjmp .L2
+  79               	.LVL8:
+  80               	.L5:
+ 306:drivers/avr/ws2812.c ****     "       ldi   %0,8  \n\t"
+ 307:drivers/avr/ws2812.c ****     "loop%=:            \n\t"
+ 308:drivers/avr/ws2812.c ****     "       out   %2,%3 \n\t"    //  '1' [01] '0' [01] - re
+ 309:drivers/avr/ws2812.c **** #if (w1_nops&1)
+ 310:drivers/avr/ws2812.c **** w_nop1
+ 311:drivers/avr/ws2812.c **** #endif
+ 312:drivers/avr/ws2812.c **** #if (w1_nops&2)
+ 313:drivers/avr/ws2812.c **** w_nop2
+ 314:drivers/avr/ws2812.c **** #endif
+ 315:drivers/avr/ws2812.c **** #if (w1_nops&4)
+ 316:drivers/avr/ws2812.c **** w_nop4
+ 317:drivers/avr/ws2812.c **** #endif
+ 318:drivers/avr/ws2812.c **** #if (w1_nops&8)
+ 319:drivers/avr/ws2812.c **** w_nop8
+ 320:drivers/avr/ws2812.c **** #endif
+ 321:drivers/avr/ws2812.c **** #if (w1_nops&16)
+ 322:drivers/avr/ws2812.c **** w_nop16
+ 323:drivers/avr/ws2812.c **** #endif
+ 324:drivers/avr/ws2812.c ****     "       sbrs  %1,7  \n\t"    //  '1' [03] '0' [02]
+ 325:drivers/avr/ws2812.c ****     "       out   %2,%4 \n\t"    //  '1' [--] '0' [03] - fe-low
+ 326:drivers/avr/ws2812.c ****     "       lsl   %1    \n\t"    //  '1' [04] '0' [04]
+ 327:drivers/avr/ws2812.c **** #if (w2_nops&1)
+ 328:drivers/avr/ws2812.c ****   w_nop1
+ 329:drivers/avr/ws2812.c **** #endif
+ 330:drivers/avr/ws2812.c **** #if (w2_nops&2)
+ 331:drivers/avr/ws2812.c ****   w_nop2
+ 332:drivers/avr/ws2812.c **** #endif
+ 333:drivers/avr/ws2812.c **** #if (w2_nops&4)
+ 334:drivers/avr/ws2812.c ****   w_nop4
+ 335:drivers/avr/ws2812.c **** #endif
+ 336:drivers/avr/ws2812.c **** #if (w2_nops&8)
+ 337:drivers/avr/ws2812.c ****   w_nop8
+ 338:drivers/avr/ws2812.c **** #endif
+ 339:drivers/avr/ws2812.c **** #if (w2_nops&16)
+ 340:drivers/avr/ws2812.c ****   w_nop16
+ 341:drivers/avr/ws2812.c **** #endif
+ 342:drivers/avr/ws2812.c ****     "       out   %2,%4 \n\t"    //  '1' [+1] '0' [+1] - fe-high
+ 343:drivers/avr/ws2812.c **** #if (w3_nops&1)
+ 344:drivers/avr/ws2812.c **** w_nop1
+ 345:drivers/avr/ws2812.c **** #endif
+ 346:drivers/avr/ws2812.c **** #if (w3_nops&2)
+ 347:drivers/avr/ws2812.c **** w_nop2
+ 348:drivers/avr/ws2812.c **** #endif
+ 349:drivers/avr/ws2812.c **** #if (w3_nops&4)
+ 350:drivers/avr/ws2812.c **** w_nop4
+ 351:drivers/avr/ws2812.c **** #endif
+ 352:drivers/avr/ws2812.c **** #if (w3_nops&8)
+ 353:drivers/avr/ws2812.c **** w_nop8
+ 354:drivers/avr/ws2812.c **** #endif
+ 355:drivers/avr/ws2812.c **** #if (w3_nops&16)
+ 356:drivers/avr/ws2812.c **** w_nop16
+ 357:drivers/avr/ws2812.c **** #endif
+ 358:drivers/avr/ws2812.c **** 
+ 359:drivers/avr/ws2812.c ****     "       dec   %0    \n\t"    //  '1' [+2] '0' [+2]
+ 360:drivers/avr/ws2812.c ****     "       brne  loop%=\n\t"    //  '1' [+3] '0' [+4]
+ 361:drivers/avr/ws2812.c ****     :	"=&d" (ctr)
+ 362:drivers/avr/ws2812.c ****     :	"r" (curbyte), "I" (_SFR_IO_ADDR(_SFR_IO8((RGB_DI_PIN >> 4) + 2))), "r" (maskhi), "r" (masklo
+ 363:drivers/avr/ws2812.c ****     );
+ 364:drivers/avr/ws2812.c ****   }
+ 365:drivers/avr/ws2812.c **** 
+ 366:drivers/avr/ws2812.c ****   SREG=sreg_prev;
+  81               		.loc 1 366 0
+  82 003e 3FBF      		out __SREG__,r19
+  83 0040 0895      		ret
+  84               		.cfi_endproc
+  85               	.LFE10:
+  87               		.section	.text.ws2812_setleds_pin,"ax",@progbits
+  88               	.global	ws2812_setleds_pin
+  90               	ws2812_setleds_pin:
+  91               	.LFB7:
+ 177:drivers/avr/ws2812.c ****   // ws2812_DDRREG |= pinmask; // Enable DDR
+  92               		.loc 1 177 0
+  93               		.cfi_startproc
+  94               	.LVL9:
+  95               	/* prologue: function */
+  96               	/* frame size = 0 */
+  97               	/* stack size = 0 */
+  98               	.L__stack_usage = 0
+ 180:drivers/avr/ws2812.c **** 
+  99               		.loc 1 180 0
+ 100 0000 20B3      		in r18,0x10
+ 101 0002 242B      		or r18,r20
+ 102 0004 20BB      		out 0x10,r18
+ 182:drivers/avr/ws2812.c ****   _delay_us(50);
+ 103               		.loc 1 182 0
+ 104 0006 9B01      		movw r18,r22
+ 105 0008 220F      		lsl r18
+ 106 000a 331F      		rol r19
+ 107 000c 620F      		add r22,r18
+ 108 000e 731F      		adc r23,r19
+ 109               	.LVL10:
+ 110 0010 0E94 0000 		call ws2812_sendarray_mask
+ 111               	.LVL11:
+ 112               	.LBB6:
+ 113               	.LBB7:
+ 114               		.file 2 "d:\\program files\\msys2\\home\\bnguy\\qmk_utils\\avr8-gnu-toolchain\\avr\\include\\util\
+   1:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** /* Copyright (c) 2002, Marek Michalkiewicz
+   2:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    Copyright (c) 2004,2005,2007 Joerg Wunsch
+   3:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    Copyright (c) 2007  Florin-Viorel Petrov
+   4:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    All rights reserved.
+   5:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+   6:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    Redistribution and use in source and binary forms, with or without
+   7:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    modification, are permitted provided that the following conditions are met:
+   8:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+   9:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    * Redistributions of source code must retain the above copyright
+  10:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****      notice, this list of conditions and the following disclaimer.
+  11:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  12:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    * Redistributions in binary form must reproduce the above copyright
+  13:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****      notice, this list of conditions and the following disclaimer in
+  14:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****      the documentation and/or other materials provided with the
+  15:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****      distribution.
+  16:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  17:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    * Neither the name of the copyright holders nor the names of
+  18:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****      contributors may be used to endorse or promote products derived
+  19:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****      from this software without specific prior written permission.
+  20:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  21:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  22:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  23:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  24:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  25:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  26:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  27:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  28:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  29:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  30:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  31:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****   POSSIBILITY OF SUCH DAMAGE. */
+  32:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  33:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** /* $Id$ */
+  34:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  35:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #ifndef _UTIL_DELAY_H_
+  36:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #define _UTIL_DELAY_H_ 1
+  37:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  38:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #ifndef __DOXYGEN__
+  39:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #  ifndef __HAS_DELAY_CYCLES
+  40:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #    define __HAS_DELAY_CYCLES 1
+  41:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #  endif
+  42:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #endif  /* __DOXYGEN__ */
+  43:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  44:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #include <inttypes.h>
+  45:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #include <util/delay_basic.h>
+  46:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #include <math.h>
+  47:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  48:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** /** \file */
+  49:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** /** \defgroup util_delay <util/delay.h>: Convenience functions for busy-wait delay loops
+  50:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     \code
+  51:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     #define F_CPU 1000000UL  // 1 MHz
+  52:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     //#define F_CPU 14.7456E6
+  53:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     #include <util/delay.h>
+  54:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     \endcode
+  55:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  56:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     \note As an alternative method, it is possible to pass the
+  57:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     F_CPU macro down to the compiler from the Makefile.
+  58:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     Obviously, in that case, no \c \#define statement should be
+  59:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     used.
+  60:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  61:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     The functions in this header file are wrappers around the basic
+  62:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     busy-wait functions from <util/delay_basic.h>.  They are meant as
+  63:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     convenience functions where actual time values can be specified
+  64:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     rather than a number of cycles to wait for.  The idea behind is
+  65:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     that compile-time constant expressions will be eliminated by
+  66:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     compiler optimization so floating-point expressions can be used
+  67:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     to calculate the number of delay cycles needed based on the CPU
+  68:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     frequency passed by the macro F_CPU.
+  69:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  70:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     \note In order for these functions to work as intended, compiler
+  71:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     optimizations <em>must</em> be enabled, and the delay time
+  72:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     <em>must</em> be an expression that is a known constant at
+  73:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     compile-time.  If these requirements are not met, the resulting
+  74:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     delay will be much longer (and basically unpredictable), and
+  75:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     applications that otherwise do not use floating-point calculations
+  76:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     will experience severe code bloat by the floating-point library
+  77:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     routines linked into the application.
+  78:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  79:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     The functions available allow the specification of microsecond, and
+  80:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     millisecond delays directly, using the application-supplied macro
+  81:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     F_CPU as the CPU clock frequency (in Hertz).
+  82:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  83:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** */
+  84:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  85:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #if !defined(__DOXYGEN__)
+  86:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** static __inline__ void _delay_us(double __us) __attribute__((__always_inline__));
+  87:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** static __inline__ void _delay_ms(double __ms) __attribute__((__always_inline__));
+  88:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #endif
+  89:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  90:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #ifndef F_CPU
+  91:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** /* prevent compiler error by supplying a default */
+  92:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** # warning "F_CPU not defined for <util/delay.h>"
+  93:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** /** \ingroup util_delay
+  94:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     \def F_CPU
+  95:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     \brief CPU frequency in Hz
+  96:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+  97:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     The macro F_CPU specifies the CPU frequency to be considered by
+  98:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     the delay macros.  This macro is normally supplied by the
+  99:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     environment (e.g. from within a project header, or the project's
+ 100:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     Makefile).  The value 1 MHz here is only provided as a "vanilla"
+ 101:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     fallback if no such user-provided definition could be found.
+ 102:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 103:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     In terms of the delay functions, the CPU frequency can be given as
+ 104:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     a floating-point constant (e.g. 3.6864E6 for 3.6864 MHz).
+ 105:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     However, the macros in <util/setbaud.h> require it to be an
+ 106:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****     integer value.
+ 107:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****  */
+ 108:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** # define F_CPU 1000000UL
+ 109:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #endif
+ 110:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 111:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #ifndef __OPTIMIZE__
+ 112:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** # warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
+ 113:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #endif
+ 114:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 115:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #if __HAS_DELAY_CYCLES && defined(__OPTIMIZE__) && \
+ 116:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****   !defined(__DELAY_BACKWARD_COMPATIBLE__) &&	   \
+ 117:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****   __STDC_HOSTED__
+ 118:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #  include <math.h>
+ 119:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #endif
+ 120:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 121:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** /**
+ 122:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    \ingroup util_delay
+ 123:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 124:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    Perform a delay of \c __ms milliseconds, using _delay_loop_2().
+ 125:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 126:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    The macro F_CPU is supposed to be defined to a
+ 127:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    constant defining the CPU clock frequency (in Hertz).
+ 128:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 129:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    The maximal possible delay is 262.14 ms / F_CPU in MHz.
+ 130:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 131:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    When the user request delay which exceed the maximum possible one,
+ 132:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    _delay_ms() provides a decreased resolution functionality. In this
+ 133:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    mode _delay_ms() will work with a resolution of 1/10 ms, providing
+ 134:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    delays up to 6.5535 seconds (independent from CPU frequency).  The
+ 135:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    user will not be informed about decreased resolution.
+ 136:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 137:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    If the avr-gcc toolchain has __builtin_avr_delay_cycles()
+ 138:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    support, maximal possible delay is 4294967.295 ms/ F_CPU in MHz. For
+ 139:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    values greater than the maximal possible delay, overflows results in
+ 140:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    no delay i.e., 0ms.
+ 141:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 142:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    Conversion of \c __ms into clock cycles may not always result in
+ 143:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    integer.  By default, the clock cycles rounded up to next
+ 144:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    integer. This ensures that the user gets at least \c __ms
+ 145:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    microseconds of delay.
+ 146:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 147:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    Alternatively, by defining the macro \c __DELAY_ROUND_DOWN__, or
+ 148:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    \c __DELAY_ROUND_CLOSEST__, before including this header file, the
+ 149:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    algorithm can be made to round down, or round to closest integer,
+ 150:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    respectively.
+ 151:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 152:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    \note
+ 153:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 154:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    The implementation of _delay_ms() based on
+ 155:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    __builtin_avr_delay_cycles() is not backward compatible with older
+ 156:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    implementations.  In order to get functionality backward compatible
+ 157:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    with previous versions, the macro \c "__DELAY_BACKWARD_COMPATIBLE__"
+ 158:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    must be defined before including this header file. Also, the
+ 159:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    backward compatible algorithm will be chosen if the code is
+ 160:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    compiled in a <em>freestanding environment</em> (GCC option
+ 161:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    \c -ffreestanding), as the math functions required for rounding are
+ 162:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    not available to the compiler then.
+ 163:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 164:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****  */
+ 165:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** void
+ 166:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** _delay_ms(double __ms)
+ 167:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** {
+ 168:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	double __tmp ;
+ 169:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #if __HAS_DELAY_CYCLES && defined(__OPTIMIZE__) && \
+ 170:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****   !defined(__DELAY_BACKWARD_COMPATIBLE__) &&	   \
+ 171:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****   __STDC_HOSTED__
+ 172:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	uint32_t __ticks_dc;
+ 173:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	extern void __builtin_avr_delay_cycles(unsigned long);
+ 174:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	__tmp = ((F_CPU) / 1e3) * __ms;
+ 175:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 176:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#if defined(__DELAY_ROUND_DOWN__)
+ 177:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks_dc = (uint32_t)fabs(__tmp);
+ 178:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 179:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#elif defined(__DELAY_ROUND_CLOSEST__)
+ 180:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks_dc = (uint32_t)(fabs(__tmp)+0.5);
+ 181:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 182:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#else
+ 183:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 		//round up by default
+ 184:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks_dc = (uint32_t)(ceil(fabs(__tmp)));
+ 185:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#endif
+ 186:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 187:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	__builtin_avr_delay_cycles(__ticks_dc);
+ 188:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 189:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #else
+ 190:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	uint16_t __ticks;
+ 191:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	__tmp = ((F_CPU) / 4e3) * __ms;
+ 192:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	if (__tmp < 1.0)
+ 193:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks = 1;
+ 194:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	else if (__tmp > 65535)
+ 195:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	{
+ 196:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 		//	__ticks = requested delay in 1/10 ms
+ 197:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks = (uint16_t) (__ms * 10.0);
+ 198:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 		while(__ticks)
+ 199:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 		{
+ 200:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 			// wait 1/10 ms
+ 201:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 			_delay_loop_2(((F_CPU) / 4e3) / 10);
+ 202:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 			__ticks --;
+ 203:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 		}
+ 204:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 		return;
+ 205:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	}
+ 206:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	else
+ 207:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks = (uint16_t)__tmp;
+ 208:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	_delay_loop_2(__ticks);
+ 209:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #endif
+ 210:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** }
+ 211:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 212:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** /**
+ 213:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    \ingroup util_delay
+ 214:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 215:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    Perform a delay of \c __us microseconds, using _delay_loop_1().
+ 216:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 217:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    The macro F_CPU is supposed to be defined to a
+ 218:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    constant defining the CPU clock frequency (in Hertz).
+ 219:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 220:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    The maximal possible delay is 768 us / F_CPU in MHz.
+ 221:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 222:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    If the user requests a delay greater than the maximal possible one,
+ 223:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    _delay_us() will automatically call _delay_ms() instead.  The user
+ 224:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    will not be informed about this case.
+ 225:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 226:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    If the avr-gcc toolchain has __builtin_avr_delay_cycles()
+ 227:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    support, maximal possible delay is 4294967.295 us/ F_CPU in MHz. For
+ 228:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    values greater than the maximal possible delay, overflow results in
+ 229:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    no delay i.e., 0us.
+ 230:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 231:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    Conversion of \c __us into clock cycles may not always result in
+ 232:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    integer.  By default, the clock cycles rounded up to next
+ 233:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    integer. This ensures that the user gets at least \c __us
+ 234:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    microseconds of delay.
+ 235:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 236:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    Alternatively, by defining the macro \c __DELAY_ROUND_DOWN__, or
+ 237:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    \c __DELAY_ROUND_CLOSEST__, before including this header file, the
+ 238:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    algorithm can be made to round down, or round to closest integer,
+ 239:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    respectively.
+ 240:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 241:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    \note
+ 242:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 243:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    The implementation of _delay_ms() based on
+ 244:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    __builtin_avr_delay_cycles() is not backward compatible with older
+ 245:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    implementations.  In order to get functionality backward compatible
+ 246:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    with previous versions, the macro \c __DELAY_BACKWARD_COMPATIBLE__
+ 247:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    must be defined before including this header file. Also, the
+ 248:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    backward compatible algorithm will be chosen if the code is
+ 249:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    compiled in a <em>freestanding environment</em> (GCC option
+ 250:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    \c -ffreestanding), as the math functions required for rounding are
+ 251:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****    not available to the compiler then.
+ 252:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 253:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****  */
+ 254:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** void
+ 255:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** _delay_us(double __us)
+ 256:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** {
+ 257:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	double __tmp ;
+ 258:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** #if __HAS_DELAY_CYCLES && defined(__OPTIMIZE__) && \
+ 259:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****   !defined(__DELAY_BACKWARD_COMPATIBLE__) &&	   \
+ 260:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h ****   __STDC_HOSTED__
+ 261:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	uint32_t __ticks_dc;
+ 262:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	extern void __builtin_avr_delay_cycles(unsigned long);
+ 263:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	__tmp = ((F_CPU) / 1e6) * __us;
+ 264:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 265:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#if defined(__DELAY_ROUND_DOWN__)
+ 266:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks_dc = (uint32_t)fabs(__tmp);
+ 267:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 268:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#elif defined(__DELAY_ROUND_CLOSEST__)
+ 269:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks_dc = (uint32_t)(fabs(__tmp)+0.5);
+ 270:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 271:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#else
+ 272:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 		//round up by default
+ 273:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 		__ticks_dc = (uint32_t)(ceil(fabs(__tmp)));
+ 274:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	#endif
+ 275:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 
+ 276:d:\program files\msys2\home\bnguy\qmk_utils\avr8-gnu-toolchain\avr\include\util\delay.h **** 	__builtin_avr_delay_cycles(__ticks_dc);
+ 115               		.loc 2 276 0
+ 116 0014 87EC      		ldi r24,lo8(199)
+ 117 0016 90E0      		ldi r25,hi8(199)
+ 118 0018 0197      	1:	sbiw r24,1
+ 119 001a 01F4      		brne 1b
+ 120 001c 00C0      		rjmp .
+ 121 001e 0000      		nop
+ 122               	.LVL12:
+ 123 0020 0895      		ret
+ 124               	.LBE7:
+ 125               	.LBE6:
+ 126               		.cfi_endproc
+ 127               	.LFE7:
+ 129               		.section	.text.ws2812_setleds,"ax",@progbits
+ 130               	.global	ws2812_setleds
+ 132               	ws2812_setleds:
+ 133               	.LFB6:
+ 171:drivers/avr/ws2812.c ****    // ws2812_setleds_pin(ledarray,leds, _BV(ws2812_pin));
+ 134               		.loc 1 171 0
+ 135               		.cfi_startproc
+ 136               	.LVL13:
+ 137               	/* prologue: function */
+ 138               	/* frame size = 0 */
+ 139               	/* stack size = 0 */
+ 140               	.L__stack_usage = 0
+ 173:drivers/avr/ws2812.c **** }
+ 141               		.loc 1 173 0
+ 142 0000 40E4      		ldi r20,lo8(64)
+ 143 0002 0C94 0000 		jmp ws2812_setleds_pin
+ 144               	.LVL14:
+ 145               		.cfi_endproc
+ 146               	.LFE6:
+ 148               		.section	.text.ws2812_setleds_rgbw,"ax",@progbits
+ 149               	.global	ws2812_setleds_rgbw
+ 151               	ws2812_setleds_rgbw:
+ 152               	.LFB8:
+ 188:drivers/avr/ws2812.c **** 
+ 153               		.loc 1 188 0
+ 154               		.cfi_startproc
+ 155               	.LVL15:
+ 156               	/* prologue: function */
+ 157               	/* frame size = 0 */
+ 158               	/* stack size = 0 */
+ 159               	.L__stack_usage = 0
+ 214:drivers/avr/ws2812.c **** 
+ 160               		.loc 1 214 0
+ 161 0000 869A      		sbi 0x10,6
+ 216:drivers/avr/ws2812.c **** 
+ 162               		.loc 1 216 0
+ 163 0002 660F      		lsl r22
+ 164 0004 771F      		rol r23
+ 165 0006 660F      		lsl r22
+ 166 0008 771F      		rol r23
+ 167               	.LVL16:
+ 168 000a 40E4      		ldi r20,lo8(64)
+ 169 000c 0E94 0000 		call ws2812_sendarray_mask
+ 170               	.LVL17:
+ 171               	.LBB8:
+ 172               	.LBB9:
+ 173               		.loc 2 276 0
+ 174 0010 8FE3      		ldi r24,lo8(319)
+ 175 0012 91E0      		ldi r25,hi8(319)
+ 176 0014 0197      	1:	sbiw r24,1
+ 177 0016 01F4      		brne 1b
+ 178 0018 00C0      		rjmp .
+ 179 001a 0000      		nop
+ 180               	.LVL18:
+ 181 001c 0895      		ret
+ 182               	.LBE9:
+ 183               	.LBE8:
+ 184               		.cfi_endproc
+ 185               	.LFE8:
+ 187               		.section	.text.ws2812_sendarray,"ax",@progbits
+ 188               	.global	ws2812_sendarray
+ 190               	ws2812_sendarray:
+ 191               	.LFB9:
+ 225:drivers/avr/ws2812.c ****   ws2812_sendarray_mask(data,datlen,_BV(RGB_DI_PIN & 0xF));
+ 192               		.loc 1 225 0
+ 193               		.cfi_startproc
+ 194               	.LVL19:
+ 195               	/* prologue: function */
+ 196               	/* frame size = 0 */
+ 197               	/* stack size = 0 */
+ 198               	.L__stack_usage = 0
+ 226:drivers/avr/ws2812.c **** }
+ 199               		.loc 1 226 0
+ 200 0000 40E4      		ldi r20,lo8(64)
+ 201 0002 0C94 0000 		jmp ws2812_sendarray_mask
+ 202               	.LVL20:
+ 203               		.cfi_endproc
+ 204               	.LFE9:
+ 206               		.text
+ 207               	.Letext0:
+ 208               		.file 3 "d:\\program files\\msys2\\home\\bnguy\\qmk_utils\\avr8-gnu-toolchain\\avr\\include\\stdin
+ 209               		.file 4 "./quantum/color.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 ws2812.c
+D:\Program Files\msys2\tmp\ccK4lp7v.s:2      *ABS*:0000003e __SP_H__
+D:\Program Files\msys2\tmp\ccK4lp7v.s:3      *ABS*:0000003d __SP_L__
+D:\Program Files\msys2\tmp\ccK4lp7v.s:4      *ABS*:0000003f __SREG__
+D:\Program Files\msys2\tmp\ccK4lp7v.s:5      *ABS*:00000000 __tmp_reg__
+D:\Program Files\msys2\tmp\ccK4lp7v.s:6      *ABS*:00000001 __zero_reg__
+D:\Program Files\msys2\tmp\ccK4lp7v.s:13     .text.ws2812_sendarray_mask:00000000 ws2812_sendarray_mask
+D:\Program Files\msys2\tmp\ccK4lp7v.s:59     .text.ws2812_sendarray_mask:00000020 loop39
+D:\Program Files\msys2\tmp\ccK4lp7v.s:90     .text.ws2812_setleds_pin:00000000 ws2812_setleds_pin
+D:\Program Files\msys2\tmp\ccK4lp7v.s:132    .text.ws2812_setleds:00000000 ws2812_setleds
+D:\Program Files\msys2\tmp\ccK4lp7v.s:151    .text.ws2812_setleds_rgbw:00000000 ws2812_setleds_rgbw
+D:\Program Files\msys2\tmp\ccK4lp7v.s:190    .text.ws2812_sendarray:00000000 ws2812_sendarray
+
+NO UNDEFINED SYMBOLS

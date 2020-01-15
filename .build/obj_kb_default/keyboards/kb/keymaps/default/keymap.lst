@@ -1,0 +1,331 @@
+   1               		.file	"keymap.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.action_get_macro,"ax",@progbits
+  11               	.global	action_get_macro
+  13               	action_get_macro:
+  14               	.LFB111:
+  15               		.file 1 "keyboards/kb/keymaps/default/keymap.c"
+   1:keyboards/kb/keymaps/default/keymap.c **** #include "kb.h"
+   2:keyboards/kb/keymaps/default/keymap.c **** 
+   3:keyboards/kb/keymaps/default/keymap.c **** const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
+   4:keyboards/kb/keymaps/default/keymap.c **** 
+   5:keyboards/kb/keymaps/default/keymap.c **** 	KEYMAP(
+   6:keyboards/kb/keymaps/default/keymap.c **** 		KC_3, KC_4, KC_5, KC_6, 
+   7:keyboards/kb/keymaps/default/keymap.c **** 		KC_2, TG(1), KC_1, KC_0),
+   8:keyboards/kb/keymaps/default/keymap.c **** 
+   9:keyboards/kb/keymaps/default/keymap.c **** 	KEYMAP(
+  10:keyboards/kb/keymaps/default/keymap.c **** 		RGB_VAI, RGB_VAD, KC_TRNS, KC_TRNS, 
+  11:keyboards/kb/keymaps/default/keymap.c **** 		RGB_MOD, KC_TRNS, RGB_TOG, KC_TRNS),
+  12:keyboards/kb/keymaps/default/keymap.c **** 
+  13:keyboards/kb/keymaps/default/keymap.c **** 	KEYMAP(
+  14:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, 
+  15:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
+  16:keyboards/kb/keymaps/default/keymap.c **** 
+  17:keyboards/kb/keymaps/default/keymap.c **** 	KEYMAP(
+  18:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, 
+  19:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
+  20:keyboards/kb/keymaps/default/keymap.c **** 
+  21:keyboards/kb/keymaps/default/keymap.c **** 	KEYMAP(
+  22:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, 
+  23:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
+  24:keyboards/kb/keymaps/default/keymap.c **** 
+  25:keyboards/kb/keymaps/default/keymap.c **** 	KEYMAP(
+  26:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, 
+  27:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
+  28:keyboards/kb/keymaps/default/keymap.c **** 
+  29:keyboards/kb/keymaps/default/keymap.c **** 	KEYMAP(
+  30:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, 
+  31:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
+  32:keyboards/kb/keymaps/default/keymap.c **** 
+  33:keyboards/kb/keymaps/default/keymap.c **** 	KEYMAP(
+  34:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, 
+  35:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
+  36:keyboards/kb/keymaps/default/keymap.c **** 
+  37:keyboards/kb/keymaps/default/keymap.c **** 	KEYMAP(
+  38:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, 
+  39:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
+  40:keyboards/kb/keymaps/default/keymap.c **** 
+  41:keyboards/kb/keymaps/default/keymap.c **** 	KEYMAP(
+  42:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, 
+  43:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
+  44:keyboards/kb/keymaps/default/keymap.c **** 
+  45:keyboards/kb/keymaps/default/keymap.c **** 	KEYMAP(
+  46:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, 
+  47:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
+  48:keyboards/kb/keymaps/default/keymap.c **** 
+  49:keyboards/kb/keymaps/default/keymap.c **** 	KEYMAP(
+  50:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, 
+  51:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
+  52:keyboards/kb/keymaps/default/keymap.c **** 
+  53:keyboards/kb/keymaps/default/keymap.c **** 	KEYMAP(
+  54:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, 
+  55:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
+  56:keyboards/kb/keymaps/default/keymap.c **** 
+  57:keyboards/kb/keymaps/default/keymap.c **** 	KEYMAP(
+  58:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, 
+  59:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
+  60:keyboards/kb/keymaps/default/keymap.c **** 
+  61:keyboards/kb/keymaps/default/keymap.c **** 	KEYMAP(
+  62:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, 
+  63:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
+  64:keyboards/kb/keymaps/default/keymap.c **** 
+  65:keyboards/kb/keymaps/default/keymap.c **** 	KEYMAP(
+  66:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, 
+  67:keyboards/kb/keymaps/default/keymap.c **** 		KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS)
+  68:keyboards/kb/keymaps/default/keymap.c **** 
+  69:keyboards/kb/keymaps/default/keymap.c **** };
+  70:keyboards/kb/keymaps/default/keymap.c **** 
+  71:keyboards/kb/keymaps/default/keymap.c **** const macro_t *action_get_macro(keyrecord_t *record, uint8_t id, uint8_t opt) {
+  16               		.loc 1 71 0
+  17               		.cfi_startproc
+  18               	.LVL0:
+  19               	/* prologue: function */
+  20               	/* frame size = 0 */
+  21               	/* stack size = 0 */
+  22               	.L__stack_usage = 0
+  72:keyboards/kb/keymaps/default/keymap.c **** 	//keyevent_t event = record->event;
+  73:keyboards/kb/keymaps/default/keymap.c **** 
+  74:keyboards/kb/keymaps/default/keymap.c **** 	switch (id) {
+  75:keyboards/kb/keymaps/default/keymap.c **** 
+  76:keyboards/kb/keymaps/default/keymap.c **** 	}
+  77:keyboards/kb/keymaps/default/keymap.c **** 	return MACRO_NONE;
+  78:keyboards/kb/keymaps/default/keymap.c **** }
+  23               		.loc 1 78 0
+  24 0000 80E0      		ldi r24,0
+  25 0002 90E0      		ldi r25,0
+  26               	.LVL1:
+  27 0004 0895      		ret
+  28               		.cfi_endproc
+  29               	.LFE111:
+  31               		.section	.text.matrix_init_user,"ax",@progbits
+  32               	.global	matrix_init_user
+  34               	matrix_init_user:
+  35               	.LFB117:
+  36               		.cfi_startproc
+  37               	/* prologue: function */
+  38               	/* frame size = 0 */
+  39               	/* stack size = 0 */
+  40               	.L__stack_usage = 0
+  41 0000 0895      		ret
+  42               		.cfi_endproc
+  43               	.LFE117:
+  45               		.section	.text.matrix_scan_user,"ax",@progbits
+  46               	.global	matrix_scan_user
+  48               	matrix_scan_user:
+  49               	.LFB113:
+  79:keyboards/kb/keymaps/default/keymap.c **** 
+  80:keyboards/kb/keymaps/default/keymap.c **** void matrix_init_user(void) {
+  81:keyboards/kb/keymaps/default/keymap.c **** }
+  82:keyboards/kb/keymaps/default/keymap.c **** 
+  83:keyboards/kb/keymaps/default/keymap.c **** void matrix_scan_user(void) {
+  50               		.loc 1 83 0
+  51               		.cfi_startproc
+  52               	/* prologue: function */
+  53               	/* frame size = 0 */
+  54               	/* stack size = 0 */
+  55               	.L__stack_usage = 0
+  56 0000 0895      		ret
+  57               		.cfi_endproc
+  58               	.LFE113:
+  60               		.section	.text.process_record_user,"ax",@progbits
+  61               	.global	process_record_user
+  63               	process_record_user:
+  64               	.LFB114:
+  84:keyboards/kb/keymaps/default/keymap.c **** }
+  85:keyboards/kb/keymaps/default/keymap.c **** 
+  86:keyboards/kb/keymaps/default/keymap.c **** bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+  65               		.loc 1 86 0
+  66               		.cfi_startproc
+  67               	.LVL2:
+  68               	/* prologue: function */
+  69               	/* frame size = 0 */
+  70               	/* stack size = 0 */
+  71               	.L__stack_usage = 0
+  87:keyboards/kb/keymaps/default/keymap.c **** 	return true;
+  88:keyboards/kb/keymaps/default/keymap.c **** }
+  72               		.loc 1 88 0
+  73 0000 81E0      		ldi r24,lo8(1)
+  74               	.LVL3:
+  75 0002 0895      		ret
+  76               		.cfi_endproc
+  77               	.LFE114:
+  79               		.section	.text.led_set_user,"ax",@progbits
+  80               	.global	led_set_user
+  82               	led_set_user:
+  83               	.LFB115:
+  89:keyboards/kb/keymaps/default/keymap.c **** 
+  90:keyboards/kb/keymaps/default/keymap.c **** void led_set_user(uint8_t usb_led) {
+  84               		.loc 1 90 0
+  85               		.cfi_startproc
+  86               	.LVL4:
+  87               	/* prologue: function */
+  88               	/* frame size = 0 */
+  89               	/* stack size = 0 */
+  90               	.L__stack_usage = 0
+  91 0000 0895      		ret
+  92               		.cfi_endproc
+  93               	.LFE115:
+  95               	.global	keymaps
+  96               		.section	.progmem.data.keymaps,"a",@progbits
+  99               	keymaps:
+ 100 0000 2000      		.word	32
+ 101 0002 2100      		.word	33
+ 102 0004 2200      		.word	34
+ 103 0006 2300      		.word	35
+ 104 0008 1F00      		.word	31
+ 105 000a 0153      		.word	21249
+ 106 000c 1E00      		.word	30
+ 107 000e 2700      		.word	39
+ 108 0010 C95C      		.word	23753
+ 109 0012 CA5C      		.word	23754
+ 110 0014 0100      		.word	1
+ 111 0016 0100      		.word	1
+ 112 0018 C35C      		.word	23747
+ 113 001a 0100      		.word	1
+ 114 001c C25C      		.word	23746
+ 115 001e 0100      		.word	1
+ 116 0020 0100      		.word	1
+ 117 0022 0100      		.word	1
+ 118 0024 0100      		.word	1
+ 119 0026 0100      		.word	1
+ 120 0028 0100      		.word	1
+ 121 002a 0100      		.word	1
+ 122 002c 0100      		.word	1
+ 123 002e 0100      		.word	1
+ 124 0030 0100      		.word	1
+ 125 0032 0100      		.word	1
+ 126 0034 0100      		.word	1
+ 127 0036 0100      		.word	1
+ 128 0038 0100      		.word	1
+ 129 003a 0100      		.word	1
+ 130 003c 0100      		.word	1
+ 131 003e 0100      		.word	1
+ 132 0040 0100      		.word	1
+ 133 0042 0100      		.word	1
+ 134 0044 0100      		.word	1
+ 135 0046 0100      		.word	1
+ 136 0048 0100      		.word	1
+ 137 004a 0100      		.word	1
+ 138 004c 0100      		.word	1
+ 139 004e 0100      		.word	1
+ 140 0050 0100      		.word	1
+ 141 0052 0100      		.word	1
+ 142 0054 0100      		.word	1
+ 143 0056 0100      		.word	1
+ 144 0058 0100      		.word	1
+ 145 005a 0100      		.word	1
+ 146 005c 0100      		.word	1
+ 147 005e 0100      		.word	1
+ 148 0060 0100      		.word	1
+ 149 0062 0100      		.word	1
+ 150 0064 0100      		.word	1
+ 151 0066 0100      		.word	1
+ 152 0068 0100      		.word	1
+ 153 006a 0100      		.word	1
+ 154 006c 0100      		.word	1
+ 155 006e 0100      		.word	1
+ 156 0070 0100      		.word	1
+ 157 0072 0100      		.word	1
+ 158 0074 0100      		.word	1
+ 159 0076 0100      		.word	1
+ 160 0078 0100      		.word	1
+ 161 007a 0100      		.word	1
+ 162 007c 0100      		.word	1
+ 163 007e 0100      		.word	1
+ 164 0080 0100      		.word	1
+ 165 0082 0100      		.word	1
+ 166 0084 0100      		.word	1
+ 167 0086 0100      		.word	1
+ 168 0088 0100      		.word	1
+ 169 008a 0100      		.word	1
+ 170 008c 0100      		.word	1
+ 171 008e 0100      		.word	1
+ 172 0090 0100      		.word	1
+ 173 0092 0100      		.word	1
+ 174 0094 0100      		.word	1
+ 175 0096 0100      		.word	1
+ 176 0098 0100      		.word	1
+ 177 009a 0100      		.word	1
+ 178 009c 0100      		.word	1
+ 179 009e 0100      		.word	1
+ 180 00a0 0100      		.word	1
+ 181 00a2 0100      		.word	1
+ 182 00a4 0100      		.word	1
+ 183 00a6 0100      		.word	1
+ 184 00a8 0100      		.word	1
+ 185 00aa 0100      		.word	1
+ 186 00ac 0100      		.word	1
+ 187 00ae 0100      		.word	1
+ 188 00b0 0100      		.word	1
+ 189 00b2 0100      		.word	1
+ 190 00b4 0100      		.word	1
+ 191 00b6 0100      		.word	1
+ 192 00b8 0100      		.word	1
+ 193 00ba 0100      		.word	1
+ 194 00bc 0100      		.word	1
+ 195 00be 0100      		.word	1
+ 196 00c0 0100      		.word	1
+ 197 00c2 0100      		.word	1
+ 198 00c4 0100      		.word	1
+ 199 00c6 0100      		.word	1
+ 200 00c8 0100      		.word	1
+ 201 00ca 0100      		.word	1
+ 202 00cc 0100      		.word	1
+ 203 00ce 0100      		.word	1
+ 204 00d0 0100      		.word	1
+ 205 00d2 0100      		.word	1
+ 206 00d4 0100      		.word	1
+ 207 00d6 0100      		.word	1
+ 208 00d8 0100      		.word	1
+ 209 00da 0100      		.word	1
+ 210 00dc 0100      		.word	1
+ 211 00de 0100      		.word	1
+ 212 00e0 0100      		.word	1
+ 213 00e2 0100      		.word	1
+ 214 00e4 0100      		.word	1
+ 215 00e6 0100      		.word	1
+ 216 00e8 0100      		.word	1
+ 217 00ea 0100      		.word	1
+ 218 00ec 0100      		.word	1
+ 219 00ee 0100      		.word	1
+ 220 00f0 0100      		.word	1
+ 221 00f2 0100      		.word	1
+ 222 00f4 0100      		.word	1
+ 223 00f6 0100      		.word	1
+ 224 00f8 0100      		.word	1
+ 225 00fa 0100      		.word	1
+ 226 00fc 0100      		.word	1
+ 227 00fe 0100      		.word	1
+ 228               		.text
+ 229               	.Letext0:
+ 230               		.file 2 "c:\\msys64_2\\home\\egypt2\\qmk_utils\\avr8-gnu-toolchain\\avr\\include\\stdint.h"
+ 231               		.file 3 "tmk_core/common/keyboard.h"
+ 232               		.file 4 "tmk_core/common/action_macro.h"
+ 233               		.file 5 "tmk_core/common/action.h"
+ 234               		.file 6 "tmk_core/common/report.h"
+ 235               		.file 7 "tmk_core/common/keycode.h"
+ 236               		.file 8 "quantum/quantum_keycodes.h"
+ 237               		.file 9 "lib/lufa/LUFA/Drivers/USB/Core/USBTask.h"
+ 238               		.file 10 "tmk_core/common/action_util.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 keymap.c
+C:\msys64_2\tmp\ccYRGOIe.s:2      *ABS*:0000003e __SP_H__
+C:\msys64_2\tmp\ccYRGOIe.s:3      *ABS*:0000003d __SP_L__
+C:\msys64_2\tmp\ccYRGOIe.s:4      *ABS*:0000003f __SREG__
+C:\msys64_2\tmp\ccYRGOIe.s:5      *ABS*:00000000 __tmp_reg__
+C:\msys64_2\tmp\ccYRGOIe.s:6      *ABS*:00000001 __zero_reg__
+C:\msys64_2\tmp\ccYRGOIe.s:13     .text.action_get_macro:00000000 action_get_macro
+C:\msys64_2\tmp\ccYRGOIe.s:34     .text.matrix_init_user:00000000 matrix_init_user
+C:\msys64_2\tmp\ccYRGOIe.s:48     .text.matrix_scan_user:00000000 matrix_scan_user
+C:\msys64_2\tmp\ccYRGOIe.s:63     .text.process_record_user:00000000 process_record_user
+C:\msys64_2\tmp\ccYRGOIe.s:82     .text.led_set_user:00000000 led_set_user
+C:\msys64_2\tmp\ccYRGOIe.s:99     .progmem.data.keymaps:00000000 keymaps
+
+NO UNDEFINED SYMBOLS

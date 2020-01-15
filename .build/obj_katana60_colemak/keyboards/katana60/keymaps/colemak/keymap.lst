@@ -1,0 +1,549 @@
+   1               		.file	"keymap.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.action_get_macro,"ax",@progbits
+  11               	.global	action_get_macro
+  13               	action_get_macro:
+  14               	.LFB18:
+  15               		.file 1 "keyboards/katana60/keymaps/colemak/keymap.c"
+   1:keyboards/katana60/keymaps/colemak/keymap.c **** /* Copyright 2017 Baris Tosun
+   2:keyboards/katana60/keymaps/colemak/keymap.c ****  *
+   3:keyboards/katana60/keymaps/colemak/keymap.c ****  * This program is free software: you can redistribute it and/or modify
+   4:keyboards/katana60/keymaps/colemak/keymap.c ****  * it under the terms of the GNU General Public License as published by
+   5:keyboards/katana60/keymaps/colemak/keymap.c ****  * the Free Software Foundation, either version 2 of the License, or
+   6:keyboards/katana60/keymaps/colemak/keymap.c ****  * (at your option) any later version.
+   7:keyboards/katana60/keymaps/colemak/keymap.c ****  *
+   8:keyboards/katana60/keymaps/colemak/keymap.c ****  * This program is distributed in the hope that it will be useful,
+   9:keyboards/katana60/keymaps/colemak/keymap.c ****  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+  10:keyboards/katana60/keymaps/colemak/keymap.c ****  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  11:keyboards/katana60/keymaps/colemak/keymap.c ****  * GNU General Public License for more details.
+  12:keyboards/katana60/keymaps/colemak/keymap.c ****  *
+  13:keyboards/katana60/keymaps/colemak/keymap.c ****  * You should have received a copy of the GNU General Public License
+  14:keyboards/katana60/keymaps/colemak/keymap.c ****  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  15:keyboards/katana60/keymaps/colemak/keymap.c ****  */
+  16:keyboards/katana60/keymaps/colemak/keymap.c **** #include QMK_KEYBOARD_H
+  17:keyboards/katana60/keymaps/colemak/keymap.c **** 
+  18:keyboards/katana60/keymaps/colemak/keymap.c **** // Windows based definitions.
+  19:keyboards/katana60/keymaps/colemak/keymap.c **** #define K_SPCFN LT(SYMB, KC_SPACE) // Tap for space, hold for symbols layer
+  20:keyboards/katana60/keymaps/colemak/keymap.c **** #define K_PRVWD LCTL(KC_LEFT)      // Previous word
+  21:keyboards/katana60/keymaps/colemak/keymap.c **** #define K_NXTWD LCTL(KC_RIGHT)     // Next word
+  22:keyboards/katana60/keymaps/colemak/keymap.c **** #define K_LSTRT KC_HOME            // Start of line
+  23:keyboards/katana60/keymaps/colemak/keymap.c **** #define K_LEND  KC_END             // End of line
+  24:keyboards/katana60/keymaps/colemak/keymap.c **** #define UNDO    LCTL(KC_Z)         // UNDO
+  25:keyboards/katana60/keymaps/colemak/keymap.c **** #define CUT     LCTL(KC_X)         // CUT
+  26:keyboards/katana60/keymaps/colemak/keymap.c **** #define COPY    LCTL(KC_C)         // COPY
+  27:keyboards/katana60/keymaps/colemak/keymap.c **** #define PASTE   LCTL(KC_V)         // PASTE
+  28:keyboards/katana60/keymaps/colemak/keymap.c **** 
+  29:keyboards/katana60/keymaps/colemak/keymap.c **** 
+  30:keyboards/katana60/keymaps/colemak/keymap.c **** #define BASE 0 // Default
+  31:keyboards/katana60/keymaps/colemak/keymap.c **** #define NUMB 1 // Numbers
+  32:keyboards/katana60/keymaps/colemak/keymap.c **** #define SYMB 2 // Symbols
+  33:keyboards/katana60/keymaps/colemak/keymap.c **** #define CURS 3 // Text Editing
+  34:keyboards/katana60/keymaps/colemak/keymap.c **** 
+  35:keyboards/katana60/keymaps/colemak/keymap.c **** const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
+  36:keyboards/katana60/keymaps/colemak/keymap.c **** [BASE] = LAYOUT( /* Base */
+  37:keyboards/katana60/keymaps/colemak/keymap.c ****   KC_ESC,  KC_GRV,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    DF(1),   KC_6,    KC_7,    KC_8,  
+  38:keyboards/katana60/keymaps/colemak/keymap.c ****   KC_TAB,  KC_Q,    KC_W,    KC_F,    KC_P,    KC_G,    KC_LBRC,          KC_RBRC, KC_J,    KC_L,  
+  39:keyboards/katana60/keymaps/colemak/keymap.c ****   MO(3),   KC_A,    KC_R,    KC_S,    KC_T,    KC_D,    KC_HOME,          KC_PGUP, KC_H,    KC_N,  
+  40:keyboards/katana60/keymaps/colemak/keymap.c ****   KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_END,  KC_DEL,  KC_PGDN, KC_K,    KC_M,  
+  41:keyboards/katana60/keymaps/colemak/keymap.c ****   MO(2),   KC_LCTL, KC_LGUI, KC_LALT,                   KC_BSPC, KC_ENT,  K_SPCFN,          KC_LEFT
+  42:keyboards/katana60/keymaps/colemak/keymap.c ****     ),
+  43:keyboards/katana60/keymaps/colemak/keymap.c **** [NUMB] = LAYOUT(
+  44:keyboards/katana60/keymaps/colemak/keymap.c ****   _______, _______, _______, _______, _______, _______, _______, DF(0),   KC_PSLS, KC_PAST, KC_PMNS
+  45:keyboards/katana60/keymaps/colemak/keymap.c ****   _______, _______, _______, KC_MS_U, _______, _______, _______,          KC_7,    KC_8,    KC_9,  
+  46:keyboards/katana60/keymaps/colemak/keymap.c ****   _______, KC_BTN2, KC_MS_L, KC_MS_D, KC_MS_R, _______, _______,          KC_4,    KC_5,    KC_6,  
+  47:keyboards/katana60/keymaps/colemak/keymap.c ****   _______, _______, KC_ACL0, KC_ACL1, KC_ACL2, _______, _______, _______, KC_1,    KC_2,    KC_3,  
+  48:keyboards/katana60/keymaps/colemak/keymap.c ****   _______, _______, _______, _______,                   KC_BTN1, _______, KC_P0,            KC_PDOT
+  49:keyboards/katana60/keymaps/colemak/keymap.c ****     ),
+  50:keyboards/katana60/keymaps/colemak/keymap.c **** [SYMB] = LAYOUT(
+  51:keyboards/katana60/keymaps/colemak/keymap.c ****   RESET,   _______, KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   _______, KC_F6,   KC_F7,   KC_F8, 
+  52:keyboards/katana60/keymaps/colemak/keymap.c ****   KC_GRV,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    _______,          _______, KC_6,    KC_7,  
+  53:keyboards/katana60/keymaps/colemak/keymap.c ****   _______, KC_EXLM, KC_AT,   KC_HASH, KC_DLR,  KC_PERC, KC_VOLD,          KC_VOLU, KC_CIRC, KC_AMPR
+  54:keyboards/katana60/keymaps/colemak/keymap.c ****   _______, KC_PLUS, KC_MINS, KC_EQL,  KC_LCBR, KC_RCBR, KC_MPRV, KC_MPLY, KC_MNXT, KC_LBRC, KC_RBRC
+  55:keyboards/katana60/keymaps/colemak/keymap.c ****   _______, _______, _______, _______,                   KC_DEL,  _______, _______,          _______
+  56:keyboards/katana60/keymaps/colemak/keymap.c ****     ),
+  57:keyboards/katana60/keymaps/colemak/keymap.c **** [CURS] = LAYOUT(
+  58:keyboards/katana60/keymaps/colemak/keymap.c ****   _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______
+  59:keyboards/katana60/keymaps/colemak/keymap.c ****   _______, _______, KC_WH_U, _______, _______, _______, _______,          _______, _______, K_PRVWD
+  60:keyboards/katana60/keymaps/colemak/keymap.c ****   _______, KC_LCTL, KC_WH_D, KC_LSFT, _______, _______, _______,          _______, KC_BSPC, KC_LEFT
+  61:keyboards/katana60/keymaps/colemak/keymap.c ****   _______, UNDO,    CUT,     COPY,    PASTE,   _______, _______, _______, _______, _______, K_LSTRT
+  62:keyboards/katana60/keymaps/colemak/keymap.c ****   _______, _______, _______, _______,                   _______, _______, _______,          _______
+  63:keyboards/katana60/keymaps/colemak/keymap.c ****     )
+  64:keyboards/katana60/keymaps/colemak/keymap.c **** 
+  65:keyboards/katana60/keymaps/colemak/keymap.c **** };
+  66:keyboards/katana60/keymaps/colemak/keymap.c **** 
+  67:keyboards/katana60/keymaps/colemak/keymap.c **** const macro_t *action_get_macro(keyrecord_t *record, uint8_t id, uint8_t opt)
+  68:keyboards/katana60/keymaps/colemak/keymap.c **** {
+  16               		.loc 1 68 0
+  17               		.cfi_startproc
+  18               	.LVL0:
+  19               	/* prologue: function */
+  20               	/* frame size = 0 */
+  21               	/* stack size = 0 */
+  22               	.L__stack_usage = 0
+  69:keyboards/katana60/keymaps/colemak/keymap.c ****   // MACRODOWN only works in this function
+  70:keyboards/katana60/keymaps/colemak/keymap.c ****       switch(id) {
+  23               		.loc 1 70 0
+  24 0000 6111      		cpse r22,__zero_reg__
+  25 0002 00C0      		rjmp .L2
+  71:keyboards/katana60/keymaps/colemak/keymap.c ****         case 0:
+  72:keyboards/katana60/keymaps/colemak/keymap.c ****           if (record->event.pressed) {
+  26               		.loc 1 72 0
+  27 0004 FC01      		movw r30,r24
+  28 0006 8281      		ldd r24,Z+2
+  29               	.LVL1:
+  30 0008 8823      		tst r24
+  31 000a 01F0      		breq .L4
+  73:keyboards/katana60/keymaps/colemak/keymap.c ****             register_code(KC_RSFT);
+  32               		.loc 1 73 0
+  33 000c 85EE      		ldi r24,lo8(-27)
+  34 000e 0E94 0000 		call register_code
+  35               	.LVL2:
+  36               	.L2:
+  74:keyboards/katana60/keymaps/colemak/keymap.c ****           } else {
+  75:keyboards/katana60/keymaps/colemak/keymap.c ****             unregister_code(KC_RSFT);
+  76:keyboards/katana60/keymaps/colemak/keymap.c ****           }
+  77:keyboards/katana60/keymaps/colemak/keymap.c ****         break;
+  78:keyboards/katana60/keymaps/colemak/keymap.c ****       }
+  79:keyboards/katana60/keymaps/colemak/keymap.c ****     return MACRO_NONE;
+  80:keyboards/katana60/keymaps/colemak/keymap.c **** };
+  37               		.loc 1 80 0
+  38 0012 90E0      		ldi r25,0
+  39 0014 80E0      		ldi r24,0
+  40               	/* epilogue start */
+  41 0016 0895      		ret
+  42               	.LVL3:
+  43               	.L4:
+  75:keyboards/katana60/keymaps/colemak/keymap.c ****           }
+  44               		.loc 1 75 0
+  45 0018 85EE      		ldi r24,lo8(-27)
+  46 001a 0E94 0000 		call unregister_code
+  47               	.LVL4:
+  48 001e 00C0      		rjmp .L2
+  49               		.cfi_endproc
+  50               	.LFE18:
+  52               		.section	.text.matrix_init_user,"ax",@progbits
+  53               	.global	matrix_init_user
+  55               	matrix_init_user:
+  56               	.LFB19:
+  81:keyboards/katana60/keymaps/colemak/keymap.c **** 
+  82:keyboards/katana60/keymaps/colemak/keymap.c **** 
+  83:keyboards/katana60/keymaps/colemak/keymap.c **** void matrix_init_user(void) {
+  57               		.loc 1 83 0
+  58               		.cfi_startproc
+  59               	/* prologue: function */
+  60               	/* frame size = 0 */
+  61               	/* stack size = 0 */
+  62               	.L__stack_usage = 0
+  63               	/* epilogue start */
+  84:keyboards/katana60/keymaps/colemak/keymap.c **** 
+  85:keyboards/katana60/keymaps/colemak/keymap.c **** }
+  64               		.loc 1 85 0
+  65 0000 0895      		ret
+  66               		.cfi_endproc
+  67               	.LFE19:
+  69               		.section	.text.matrix_scan_user,"ax",@progbits
+  70               	.global	matrix_scan_user
+  72               	matrix_scan_user:
+  73               	.LFB24:
+  74               		.cfi_startproc
+  75               	/* prologue: function */
+  76               	/* frame size = 0 */
+  77               	/* stack size = 0 */
+  78               	.L__stack_usage = 0
+  79               	/* epilogue start */
+  80 0000 0895      		ret
+  81               		.cfi_endproc
+  82               	.LFE24:
+  84               		.section	.text.process_record_user,"ax",@progbits
+  85               	.global	process_record_user
+  87               	process_record_user:
+  88               	.LFB21:
+  86:keyboards/katana60/keymaps/colemak/keymap.c **** 
+  87:keyboards/katana60/keymaps/colemak/keymap.c **** void matrix_scan_user(void) {
+  88:keyboards/katana60/keymaps/colemak/keymap.c **** 
+  89:keyboards/katana60/keymaps/colemak/keymap.c **** }
+  90:keyboards/katana60/keymaps/colemak/keymap.c **** 
+  91:keyboards/katana60/keymaps/colemak/keymap.c **** bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+  89               		.loc 1 91 0
+  90               		.cfi_startproc
+  91               	.LVL5:
+  92               	/* prologue: function */
+  93               	/* frame size = 0 */
+  94               	/* stack size = 0 */
+  95               	.L__stack_usage = 0
+  92:keyboards/katana60/keymaps/colemak/keymap.c ****   return true;
+  93:keyboards/katana60/keymaps/colemak/keymap.c **** }
+  96               		.loc 1 93 0
+  97 0000 81E0      		ldi r24,lo8(1)
+  98               	.LVL6:
+  99               	/* epilogue start */
+ 100 0002 0895      		ret
+ 101               		.cfi_endproc
+ 102               	.LFE21:
+ 104               		.section	.text.led_set_user,"ax",@progbits
+ 105               	.global	led_set_user
+ 107               	led_set_user:
+ 108               	.LFB22:
+  94:keyboards/katana60/keymaps/colemak/keymap.c **** 
+  95:keyboards/katana60/keymaps/colemak/keymap.c **** void led_set_user(uint8_t usb_led) {
+ 109               		.loc 1 95 0
+ 110               		.cfi_startproc
+ 111               	.LVL7:
+ 112               	/* prologue: function */
+ 113               	/* frame size = 0 */
+ 114               	/* stack size = 0 */
+ 115               	.L__stack_usage = 0
+ 116               	/* epilogue start */
+  96:keyboards/katana60/keymaps/colemak/keymap.c **** 
+  97:keyboards/katana60/keymaps/colemak/keymap.c **** }
+ 117               		.loc 1 97 0
+ 118 0000 0895      		ret
+ 119               		.cfi_endproc
+ 120               	.LFE22:
+ 122               	.global	keymaps
+ 123               		.section	.progmem.data.keymaps,"a",@progbits
+ 126               	keymaps:
+ 127 0000 0251      		.word	20738
+ 128 0002 E000      		.word	224
+ 129 0004 E300      		.word	227
+ 130 0006 E200      		.word	226
+ 131 0008 2A00      		.word	42
+ 132 000a 2800      		.word	40
+ 133 000c 2C42      		.word	16940
+ 134 000e 0000      		.word	0
+ 135 0010 0000      		.word	0
+ 136 0012 5000      		.word	80
+ 137 0014 5100      		.word	81
+ 138 0016 5200      		.word	82
+ 139 0018 4F00      		.word	79
+ 140 001a 0251      		.word	20738
+ 141 001c 0000      		.word	0
+ 142 001e E100      		.word	225
+ 143 0020 1D00      		.word	29
+ 144 0022 1B00      		.word	27
+ 145 0024 0600      		.word	6
+ 146 0026 1900      		.word	25
+ 147 0028 0500      		.word	5
+ 148 002a 4D00      		.word	77
+ 149 002c 4C00      		.word	76
+ 150 002e 4E00      		.word	78
+ 151 0030 0E00      		.word	14
+ 152 0032 1000      		.word	16
+ 153 0034 3600      		.word	54
+ 154 0036 3700      		.word	55
+ 155 0038 3800      		.word	56
+ 156 003a E500      		.word	229
+ 157 003c 0351      		.word	20739
+ 158 003e 0400      		.word	4
+ 159 0040 1500      		.word	21
+ 160 0042 1600      		.word	22
+ 161 0044 1700      		.word	23
+ 162 0046 0700      		.word	7
+ 163 0048 4A00      		.word	74
+ 164 004a 4B00      		.word	75
+ 165 004c 0B00      		.word	11
+ 166 004e 1100      		.word	17
+ 167 0050 0800      		.word	8
+ 168 0052 0C00      		.word	12
+ 169 0054 1200      		.word	18
+ 170 0056 2800      		.word	40
+ 171 0058 0000      		.word	0
+ 172 005a 2B00      		.word	43
+ 173 005c 1400      		.word	20
+ 174 005e 1A00      		.word	26
+ 175 0060 0900      		.word	9
+ 176 0062 1300      		.word	19
+ 177 0064 0A00      		.word	10
+ 178 0066 2F00      		.word	47
+ 179 0068 3000      		.word	48
+ 180 006a 0D00      		.word	13
+ 181 006c 0F00      		.word	15
+ 182 006e 1800      		.word	24
+ 183 0070 1C00      		.word	28
+ 184 0072 3300      		.word	51
+ 185 0074 2A00      		.word	42
+ 186 0076 0000      		.word	0
+ 187 0078 2900      		.word	41
+ 188 007a 3500      		.word	53
+ 189 007c 1E00      		.word	30
+ 190 007e 1F00      		.word	31
+ 191 0080 2000      		.word	32
+ 192 0082 2100      		.word	33
+ 193 0084 2200      		.word	34
+ 194 0086 0152      		.word	20993
+ 195 0088 2300      		.word	35
+ 196 008a 2400      		.word	36
+ 197 008c 2500      		.word	37
+ 198 008e 2600      		.word	38
+ 199 0090 2700      		.word	39
+ 200 0092 2D00      		.word	45
+ 201 0094 2E02      		.word	558
+ 202 0096 0100      		.word	1
+ 203 0098 0100      		.word	1
+ 204 009a 0100      		.word	1
+ 205 009c 0100      		.word	1
+ 206 009e F400      		.word	244
+ 207 00a0 0100      		.word	1
+ 208 00a2 6200      		.word	98
+ 209 00a4 0000      		.word	0
+ 210 00a6 0000      		.word	0
+ 211 00a8 6300      		.word	99
+ 212 00aa 5800      		.word	88
+ 213 00ac 0100      		.word	1
+ 214 00ae 0100      		.word	1
+ 215 00b0 0100      		.word	1
+ 216 00b2 0000      		.word	0
+ 217 00b4 0100      		.word	1
+ 218 00b6 0100      		.word	1
+ 219 00b8 FD00      		.word	253
+ 220 00ba FE00      		.word	254
+ 221 00bc FF00      		.word	255
+ 222 00be 0100      		.word	1
+ 223 00c0 0100      		.word	1
+ 224 00c2 0100      		.word	1
+ 225 00c4 1E00      		.word	30
+ 226 00c6 1F00      		.word	31
+ 227 00c8 2000      		.word	32
+ 228 00ca 5800      		.word	88
+ 229 00cc 0100      		.word	1
+ 230 00ce 0100      		.word	1
+ 231 00d0 0100      		.word	1
+ 232 00d2 0100      		.word	1
+ 233 00d4 F500      		.word	245
+ 234 00d6 F200      		.word	242
+ 235 00d8 F100      		.word	241
+ 236 00da F300      		.word	243
+ 237 00dc 0100      		.word	1
+ 238 00de 0100      		.word	1
+ 239 00e0 2100      		.word	33
+ 240 00e2 2200      		.word	34
+ 241 00e4 2300      		.word	35
+ 242 00e6 5700      		.word	87
+ 243 00e8 0100      		.word	1
+ 244 00ea 0100      		.word	1
+ 245 00ec 0100      		.word	1
+ 246 00ee 0000      		.word	0
+ 247 00f0 0100      		.word	1
+ 248 00f2 0100      		.word	1
+ 249 00f4 0100      		.word	1
+ 250 00f6 F000      		.word	240
+ 251 00f8 0100      		.word	1
+ 252 00fa 0100      		.word	1
+ 253 00fc 0100      		.word	1
+ 254 00fe 2400      		.word	36
+ 255 0100 2500      		.word	37
+ 256 0102 2600      		.word	38
+ 257 0104 5700      		.word	87
+ 258 0106 0100      		.word	1
+ 259 0108 0100      		.word	1
+ 260 010a 0100      		.word	1
+ 261 010c 0000      		.word	0
+ 262 010e 0100      		.word	1
+ 263 0110 0100      		.word	1
+ 264 0112 0100      		.word	1
+ 265 0114 0100      		.word	1
+ 266 0116 0100      		.word	1
+ 267 0118 0100      		.word	1
+ 268 011a 0100      		.word	1
+ 269 011c 0052      		.word	20992
+ 270 011e 5400      		.word	84
+ 271 0120 5500      		.word	85
+ 272 0122 5600      		.word	86
+ 273 0124 0100      		.word	1
+ 274 0126 0100      		.word	1
+ 275 0128 0100      		.word	1
+ 276 012a 0100      		.word	1
+ 277 012c 0100      		.word	1
+ 278 012e 0100      		.word	1
+ 279 0130 0100      		.word	1
+ 280 0132 0100      		.word	1
+ 281 0134 4C00      		.word	76
+ 282 0136 0100      		.word	1
+ 283 0138 0100      		.word	1
+ 284 013a 0000      		.word	0
+ 285 013c 0000      		.word	0
+ 286 013e 0100      		.word	1
+ 287 0140 0100      		.word	1
+ 288 0142 0100      		.word	1
+ 289 0144 0100      		.word	1
+ 290 0146 0100      		.word	1
+ 291 0148 0000      		.word	0
+ 292 014a 0100      		.word	1
+ 293 014c 2E02      		.word	558
+ 294 014e 2D00      		.word	45
+ 295 0150 2E00      		.word	46
+ 296 0152 2F02      		.word	559
+ 297 0154 3002      		.word	560
+ 298 0156 AC00      		.word	172
+ 299 0158 AE00      		.word	174
+ 300 015a AB00      		.word	171
+ 301 015c 2F00      		.word	47
+ 302 015e 3000      		.word	48
+ 303 0160 3300      		.word	51
+ 304 0162 3302      		.word	563
+ 305 0164 3100      		.word	49
+ 306 0166 0100      		.word	1
+ 307 0168 0100      		.word	1
+ 308 016a 1E02      		.word	542
+ 309 016c 1F02      		.word	543
+ 310 016e 2002      		.word	544
+ 311 0170 2102      		.word	545
+ 312 0172 2202      		.word	546
+ 313 0174 AA00      		.word	170
+ 314 0176 A900      		.word	169
+ 315 0178 2302      		.word	547
+ 316 017a 2402      		.word	548
+ 317 017c 2502      		.word	549
+ 318 017e 2602      		.word	550
+ 319 0180 2702      		.word	551
+ 320 0182 0100      		.word	1
+ 321 0184 0000      		.word	0
+ 322 0186 3500      		.word	53
+ 323 0188 1E00      		.word	30
+ 324 018a 1F00      		.word	31
+ 325 018c 2000      		.word	32
+ 326 018e 2100      		.word	33
+ 327 0190 2200      		.word	34
+ 328 0192 0100      		.word	1
+ 329 0194 0100      		.word	1
+ 330 0196 2300      		.word	35
+ 331 0198 2400      		.word	36
+ 332 019a 2500      		.word	37
+ 333 019c 2600      		.word	38
+ 334 019e 2700      		.word	39
+ 335 01a0 4C00      		.word	76
+ 336 01a2 0000      		.word	0
+ 337 01a4 005C      		.word	23552
+ 338 01a6 0100      		.word	1
+ 339 01a8 3A00      		.word	58
+ 340 01aa 3B00      		.word	59
+ 341 01ac 3C00      		.word	60
+ 342 01ae 3D00      		.word	61
+ 343 01b0 3E00      		.word	62
+ 344 01b2 0100      		.word	1
+ 345 01b4 3F00      		.word	63
+ 346 01b6 4000      		.word	64
+ 347 01b8 4100      		.word	65
+ 348 01ba 4200      		.word	66
+ 349 01bc 4300      		.word	67
+ 350 01be 4400      		.word	68
+ 351 01c0 4500      		.word	69
+ 352 01c2 0100      		.word	1
+ 353 01c4 0100      		.word	1
+ 354 01c6 0100      		.word	1
+ 355 01c8 0100      		.word	1
+ 356 01ca 0100      		.word	1
+ 357 01cc 0100      		.word	1
+ 358 01ce 0100      		.word	1
+ 359 01d0 0000      		.word	0
+ 360 01d2 0000      		.word	0
+ 361 01d4 0100      		.word	1
+ 362 01d6 0100      		.word	1
+ 363 01d8 0100      		.word	1
+ 364 01da 0100      		.word	1
+ 365 01dc 0100      		.word	1
+ 366 01de 0000      		.word	0
+ 367 01e0 0100      		.word	1
+ 368 01e2 1D01      		.word	285
+ 369 01e4 1B01      		.word	283
+ 370 01e6 0601      		.word	262
+ 371 01e8 1901      		.word	281
+ 372 01ea 0100      		.word	1
+ 373 01ec 0100      		.word	1
+ 374 01ee 0100      		.word	1
+ 375 01f0 0100      		.word	1
+ 376 01f2 0100      		.word	1
+ 377 01f4 4A00      		.word	74
+ 378 01f6 0100      		.word	1
+ 379 01f8 4D00      		.word	77
+ 380 01fa 0100      		.word	1
+ 381 01fc 0100      		.word	1
+ 382 01fe 0100      		.word	1
+ 383 0200 E000      		.word	224
+ 384 0202 FA00      		.word	250
+ 385 0204 E100      		.word	225
+ 386 0206 0100      		.word	1
+ 387 0208 0100      		.word	1
+ 388 020a 0100      		.word	1
+ 389 020c 0100      		.word	1
+ 390 020e 2A00      		.word	42
+ 391 0210 5000      		.word	80
+ 392 0212 5100      		.word	81
+ 393 0214 4F00      		.word	79
+ 394 0216 4C00      		.word	76
+ 395 0218 0100      		.word	1
+ 396 021a 0000      		.word	0
+ 397 021c 0100      		.word	1
+ 398 021e 0100      		.word	1
+ 399 0220 F900      		.word	249
+ 400 0222 0100      		.word	1
+ 401 0224 0100      		.word	1
+ 402 0226 0100      		.word	1
+ 403 0228 0100      		.word	1
+ 404 022a 0100      		.word	1
+ 405 022c 0100      		.word	1
+ 406 022e 5001      		.word	336
+ 407 0230 5200      		.word	82
+ 408 0232 4F01      		.word	335
+ 409 0234 0100      		.word	1
+ 410 0236 0100      		.word	1
+ 411 0238 0000      		.word	0
+ 412 023a 0100      		.word	1
+ 413 023c 0100      		.word	1
+ 414 023e 0100      		.word	1
+ 415 0240 0100      		.word	1
+ 416 0242 0100      		.word	1
+ 417 0244 0100      		.word	1
+ 418 0246 0100      		.word	1
+ 419 0248 0100      		.word	1
+ 420 024a 0100      		.word	1
+ 421 024c 0100      		.word	1
+ 422 024e 0100      		.word	1
+ 423 0250 0100      		.word	1
+ 424 0252 0100      		.word	1
+ 425 0254 0100      		.word	1
+ 426 0256 0100      		.word	1
+ 427               		.text
+ 428               	.Letext0:
+ 429               		.file 2 "/usr/local/Cellar/avr-gcc/7.2.0/avr/include/stdint.h"
+ 430               		.file 3 "/usr/local/Cellar/avr-gcc/7.2.0/lib/avr-gcc/7/gcc/avr/7.2.0/include/stddef.h"
+ 431               		.file 4 "tmk_core/common/keyboard.h"
+ 432               		.file 5 "tmk_core/common/keycode.h"
+ 433               		.file 6 "tmk_core/common/action_macro.h"
+ 434               		.file 7 "tmk_core/common/action.h"
+ 435               		.file 8 "tmk_core/common/report.h"
+ 436               		.file 9 "tmk_core/common/host.h"
+ 437               		.file 10 "tmk_core/common/avr/xprintf.h"
+ 438               		.file 11 "tmk_core/common/debug.h"
+ 439               		.file 12 "quantum/keycode_config.h"
+ 440               		.file 13 "quantum/quantum_keycodes.h"
+ 441               		.file 14 "quantum/keymap.h"
+ 442               		.file 15 "tmk_core/common/action_layer.h"
+ 443               		.file 16 "tmk_core/common/timer.h"
+ 444               		.file 17 "tmk_core/common/action_util.h"
+ 445               		.file 18 "/usr/local/Cellar/avr-gcc/7.2.0/avr/include/stdlib.h"
+ 446               		.file 19 "quantum/quantum.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 keymap.c
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccVxXjAI.s:2      *ABS*:000000000000003e __SP_H__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccVxXjAI.s:3      *ABS*:000000000000003d __SP_L__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccVxXjAI.s:4      *ABS*:000000000000003f __SREG__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccVxXjAI.s:5      *ABS*:0000000000000000 __tmp_reg__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccVxXjAI.s:6      *ABS*:0000000000000001 __zero_reg__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccVxXjAI.s:13     .text.action_get_macro:0000000000000000 action_get_macro
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccVxXjAI.s:55     .text.matrix_init_user:0000000000000000 matrix_init_user
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccVxXjAI.s:72     .text.matrix_scan_user:0000000000000000 matrix_scan_user
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccVxXjAI.s:87     .text.process_record_user:0000000000000000 process_record_user
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccVxXjAI.s:107    .text.led_set_user:0000000000000000 led_set_user
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//ccVxXjAI.s:126    .progmem.data.keymaps:0000000000000000 keymaps
+
+UNDEFINED SYMBOLS
+register_code
+unregister_code

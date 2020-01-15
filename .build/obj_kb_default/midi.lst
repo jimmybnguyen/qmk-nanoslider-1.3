@@ -1,0 +1,1632 @@
+   1               		.file	"midi.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.midi_is_statusbyte,"ax",@progbits
+  11               	.global	midi_is_statusbyte
+  13               	midi_is_statusbyte:
+  14               	.LFB0:
+  15               		.file 1 "tmk_core/protocol/midi/midi.c"
+   1:tmk_core/protocol/midi/midi.c **** //midi for embedded chips,
+   2:tmk_core/protocol/midi/midi.c **** //Copyright 2010 Alex Norman
+   3:tmk_core/protocol/midi/midi.c **** //
+   4:tmk_core/protocol/midi/midi.c **** //This file is part of avr-midi.
+   5:tmk_core/protocol/midi/midi.c **** //
+   6:tmk_core/protocol/midi/midi.c **** //avr-midi is free software: you can redistribute it and/or modify
+   7:tmk_core/protocol/midi/midi.c **** //it under the terms of the GNU General Public License as published by
+   8:tmk_core/protocol/midi/midi.c **** //the Free Software Foundation, either version 3 of the License, or
+   9:tmk_core/protocol/midi/midi.c **** //(at your option) any later version.
+  10:tmk_core/protocol/midi/midi.c **** //
+  11:tmk_core/protocol/midi/midi.c **** //avr-midi is distributed in the hope that it will be useful,
+  12:tmk_core/protocol/midi/midi.c **** //but WITHOUT ANY WARRANTY; without even the implied warranty of
+  13:tmk_core/protocol/midi/midi.c **** //MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  14:tmk_core/protocol/midi/midi.c **** //GNU General Public License for more details.
+  15:tmk_core/protocol/midi/midi.c **** //
+  16:tmk_core/protocol/midi/midi.c **** //You should have received a copy of the GNU General Public License
+  17:tmk_core/protocol/midi/midi.c **** //along with avr-midi.  If not, see <http://www.gnu.org/licenses/>.
+  18:tmk_core/protocol/midi/midi.c **** 
+  19:tmk_core/protocol/midi/midi.c **** #include "midi.h"
+  20:tmk_core/protocol/midi/midi.c **** #include <string.h> //for memcpy
+  21:tmk_core/protocol/midi/midi.c **** 
+  22:tmk_core/protocol/midi/midi.c **** #define MIN(x,y) (((x) < (y)) ? (x) : (y)) 
+  23:tmk_core/protocol/midi/midi.c **** 
+  24:tmk_core/protocol/midi/midi.c **** #ifndef NULL
+  25:tmk_core/protocol/midi/midi.c **** #define NULL 0
+  26:tmk_core/protocol/midi/midi.c **** #endif
+  27:tmk_core/protocol/midi/midi.c **** 
+  28:tmk_core/protocol/midi/midi.c **** bool midi_is_statusbyte(uint8_t theByte){
+  16               		.loc 1 28 0
+  17               		.cfi_startproc
+  18               	.LVL0:
+  19               	/* prologue: function */
+  20               	/* frame size = 0 */
+  21               	/* stack size = 0 */
+  22               	.L__stack_usage = 0
+  29:tmk_core/protocol/midi/midi.c ****    return (bool)(theByte & MIDI_STATUSMASK);
+  30:tmk_core/protocol/midi/midi.c **** }
+  23               		.loc 1 30 0
+  24 0000 881F      		rol r24
+  25 0002 8827      		clr r24
+  26 0004 881F      		rol r24
+  27               	.LVL1:
+  28 0006 0895      		ret
+  29               		.cfi_endproc
+  30               	.LFE0:
+  32               		.section	.text.midi_is_realtime,"ax",@progbits
+  33               	.global	midi_is_realtime
+  35               	midi_is_realtime:
+  36               	.LFB1:
+  31:tmk_core/protocol/midi/midi.c **** 
+  32:tmk_core/protocol/midi/midi.c **** bool midi_is_realtime(uint8_t theByte){
+  37               		.loc 1 32 0
+  38               		.cfi_startproc
+  39               	.LVL2:
+  40               	/* prologue: function */
+  41               	/* frame size = 0 */
+  42               	/* stack size = 0 */
+  43               	.L__stack_usage = 0
+  33:tmk_core/protocol/midi/midi.c ****    return (theByte >= MIDI_CLOCK);
+  44               		.loc 1 33 0
+  45 0000 91E0      		ldi r25,lo8(1)
+  46 0002 883F      		cpi r24,lo8(-8)
+  47 0004 00F4      		brsh .L3
+  48 0006 90E0      		ldi r25,0
+  49               	.L3:
+  34:tmk_core/protocol/midi/midi.c **** }
+  50               		.loc 1 34 0
+  51 0008 892F      		mov r24,r25
+  52               	.LVL3:
+  53 000a 0895      		ret
+  54               		.cfi_endproc
+  55               	.LFE1:
+  57               		.section	.text.midi_packet_length,"ax",@progbits
+  58               	.global	midi_packet_length
+  60               	midi_packet_length:
+  61               	.LFB2:
+  35:tmk_core/protocol/midi/midi.c **** 
+  36:tmk_core/protocol/midi/midi.c **** midi_packet_length_t midi_packet_length(uint8_t status){
+  62               		.loc 1 36 0
+  63               		.cfi_startproc
+  64               	.LVL4:
+  65               	/* prologue: function */
+  66               	/* frame size = 0 */
+  67               	/* stack size = 0 */
+  68               	.L__stack_usage = 0
+  37:tmk_core/protocol/midi/midi.c ****    switch(status & 0xF0){
+  69               		.loc 1 37 0
+  70 0000 982F      		mov r25,r24
+  71 0002 907F      		andi r25,lo8(-16)
+  72 0004 903B      		cpi r25,lo8(-80)
+  73 0006 01F0      		breq .L12
+  74 0008 00F4      		brsh .L8
+  75 000a 9039      		cpi r25,lo8(-112)
+  76 000c 01F0      		breq .L12
+  77 000e 903A      		cpi r25,lo8(-96)
+  78 0010 01F0      		breq .L12
+  79 0012 9038      		cpi r25,lo8(-128)
+  80 0014 01F4      		brne .L13
+  81 0016 00C0      		rjmp .L12
+  82               	.L8:
+  83 0018 903D      		cpi r25,lo8(-48)
+  84 001a 01F0      		breq .L9
+  85 001c 00F4      		brsh .L10
+  86 001e 903C      		cpi r25,lo8(-64)
+  87 0020 01F0      		breq .L9
+  88 0022 00C0      		rjmp .L13
+  89               	.L10:
+  90 0024 903E      		cpi r25,lo8(-32)
+  91 0026 01F0      		breq .L12
+  92 0028 903F      		cpi r25,lo8(-16)
+  93 002a 01F0      		breq .L11
+  94 002c 00C0      		rjmp .L13
+  95               	.L9:
+  38:tmk_core/protocol/midi/midi.c ****       case MIDI_CC:
+  39:tmk_core/protocol/midi/midi.c ****       case MIDI_NOTEON:
+  40:tmk_core/protocol/midi/midi.c ****       case MIDI_NOTEOFF:
+  41:tmk_core/protocol/midi/midi.c ****       case MIDI_AFTERTOUCH:
+  42:tmk_core/protocol/midi/midi.c ****       case MIDI_PITCHBEND:
+  43:tmk_core/protocol/midi/midi.c ****          return THREE;
+  44:tmk_core/protocol/midi/midi.c ****       case MIDI_PROGCHANGE:
+  45:tmk_core/protocol/midi/midi.c ****       case MIDI_CHANPRESSURE:
+  46:tmk_core/protocol/midi/midi.c ****       case MIDI_SONGSELECT:
+  47:tmk_core/protocol/midi/midi.c ****          return TWO;
+  96               		.loc 1 47 0
+  97 002e 82E0      		ldi r24,lo8(2)
+  98               	.LVL5:
+  99 0030 0895      		ret
+ 100               	.LVL6:
+ 101               	.L11:
+ 102 0032 815F      		subi r24,lo8(-(15))
+ 103               	.LVL7:
+ 104 0034 8F30      		cpi r24,lo8(15)
+ 105 0036 00F4      		brsh .L13
+ 106 0038 E82F      		mov r30,r24
+ 107 003a F0E0      		ldi r31,0
+ 108 003c E050      		subi r30,lo8(-(CSWTCH.11))
+ 109 003e F040      		sbci r31,hi8(-(CSWTCH.11))
+ 110 0040 8081      		ld r24,Z
+ 111               	.LVL8:
+ 112 0042 0895      		ret
+ 113               	.LVL9:
+ 114               	.L12:
+  43:tmk_core/protocol/midi/midi.c ****       case MIDI_PROGCHANGE:
+ 115               		.loc 1 43 0
+ 116 0044 83E0      		ldi r24,lo8(3)
+ 117               	.LVL10:
+ 118 0046 0895      		ret
+ 119               	.L13:
+ 120 0048 80E0      		ldi r24,0
+  48:tmk_core/protocol/midi/midi.c ****       case 0xF0:
+  49:tmk_core/protocol/midi/midi.c ****          switch(status) {
+  50:tmk_core/protocol/midi/midi.c ****             case MIDI_CLOCK:
+  51:tmk_core/protocol/midi/midi.c ****             case MIDI_TICK:
+  52:tmk_core/protocol/midi/midi.c ****             case MIDI_START:
+  53:tmk_core/protocol/midi/midi.c ****             case MIDI_CONTINUE:
+  54:tmk_core/protocol/midi/midi.c ****             case MIDI_STOP:
+  55:tmk_core/protocol/midi/midi.c ****             case MIDI_ACTIVESENSE:
+  56:tmk_core/protocol/midi/midi.c ****             case MIDI_RESET:
+  57:tmk_core/protocol/midi/midi.c ****             case MIDI_TUNEREQUEST:
+  58:tmk_core/protocol/midi/midi.c ****                return ONE;
+  59:tmk_core/protocol/midi/midi.c ****             case MIDI_SONGPOSITION:
+  60:tmk_core/protocol/midi/midi.c ****                return THREE;
+  61:tmk_core/protocol/midi/midi.c ****             case MIDI_TC_QUARTERFRAME:
+  62:tmk_core/protocol/midi/midi.c ****             case MIDI_SONGSELECT:
+  63:tmk_core/protocol/midi/midi.c ****                return TWO;
+  64:tmk_core/protocol/midi/midi.c ****             case SYSEX_END:
+  65:tmk_core/protocol/midi/midi.c ****             case SYSEX_BEGIN:
+  66:tmk_core/protocol/midi/midi.c ****             default:
+  67:tmk_core/protocol/midi/midi.c ****                return UNDEFINED;
+  68:tmk_core/protocol/midi/midi.c ****          }
+  69:tmk_core/protocol/midi/midi.c ****       default:
+  70:tmk_core/protocol/midi/midi.c ****          return UNDEFINED;
+  71:tmk_core/protocol/midi/midi.c ****    }
+  72:tmk_core/protocol/midi/midi.c **** }
+ 121               		.loc 1 72 0
+ 122 004a 0895      		ret
+ 123               		.cfi_endproc
+ 124               	.LFE2:
+ 126               		.section	.text.midi_send_cc,"ax",@progbits
+ 127               	.global	midi_send_cc
+ 129               	midi_send_cc:
+ 130               	.LFB3:
+  73:tmk_core/protocol/midi/midi.c **** 
+  74:tmk_core/protocol/midi/midi.c **** void midi_send_cc(MidiDevice * device, uint8_t chan, uint8_t num, uint8_t val){
+ 131               		.loc 1 74 0
+ 132               		.cfi_startproc
+ 133               	.LVL11:
+ 134 0000 0F93      		push r16
+ 135               	.LCFI0:
+ 136               		.cfi_def_cfa_offset 3
+ 137               		.cfi_offset 16, -2
+ 138               	/* prologue: function */
+ 139               	/* frame size = 0 */
+ 140               	/* stack size = 1 */
+ 141               	.L__stack_usage = 1
+  75:tmk_core/protocol/midi/midi.c ****    //CC Status: 0xB0 to 0xBF where the low nibble is the MIDI channel.
+  76:tmk_core/protocol/midi/midi.c ****    //CC Data: Controller Num, Controller Val
+  77:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 3,
+ 142               		.loc 1 77 0
+ 143 0002 022F      		mov r16,r18
+ 144 0004 0F77      		andi r16,lo8(127)
+ 145 0006 242F      		mov r18,r20
+ 146               	.LVL12:
+ 147 0008 2F77      		andi r18,lo8(127)
+ 148 000a 6F70      		andi r22,lo8(15)
+ 149               	.LVL13:
+ 150 000c 462F      		mov r20,r22
+ 151               	.LVL14:
+ 152 000e 406B      		ori r20,lo8(-80)
+ 153 0010 DC01      		movw r26,r24
+ 154 0012 ED91      		ld r30,X+
+ 155 0014 FC91      		ld r31,X
+ 156 0016 63E0      		ldi r22,lo8(3)
+ 157 0018 70E0      		ldi r23,0
+ 158 001a 0995      		icall
+ 159               	.LVL15:
+ 160               	/* epilogue start */
+  78:tmk_core/protocol/midi/midi.c ****          MIDI_CC | (chan & MIDI_CHANMASK),
+  79:tmk_core/protocol/midi/midi.c ****          num & 0x7F,
+  80:tmk_core/protocol/midi/midi.c ****          val & 0x7F);
+  81:tmk_core/protocol/midi/midi.c **** }
+ 161               		.loc 1 81 0
+ 162 001c 0F91      		pop r16
+ 163 001e 0895      		ret
+ 164               		.cfi_endproc
+ 165               	.LFE3:
+ 167               		.section	.text.midi_send_noteon,"ax",@progbits
+ 168               	.global	midi_send_noteon
+ 170               	midi_send_noteon:
+ 171               	.LFB4:
+  82:tmk_core/protocol/midi/midi.c **** 
+  83:tmk_core/protocol/midi/midi.c **** void midi_send_noteon(MidiDevice * device, uint8_t chan, uint8_t num, uint8_t vel){
+ 172               		.loc 1 83 0
+ 173               		.cfi_startproc
+ 174               	.LVL16:
+ 175 0000 0F93      		push r16
+ 176               	.LCFI1:
+ 177               		.cfi_def_cfa_offset 3
+ 178               		.cfi_offset 16, -2
+ 179               	/* prologue: function */
+ 180               	/* frame size = 0 */
+ 181               	/* stack size = 1 */
+ 182               	.L__stack_usage = 1
+  84:tmk_core/protocol/midi/midi.c ****    //Note Data: Note Num, Note Velocity
+  85:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 3,
+ 183               		.loc 1 85 0
+ 184 0002 022F      		mov r16,r18
+ 185 0004 0F77      		andi r16,lo8(127)
+ 186 0006 242F      		mov r18,r20
+ 187               	.LVL17:
+ 188 0008 2F77      		andi r18,lo8(127)
+ 189 000a 6F70      		andi r22,lo8(15)
+ 190               	.LVL18:
+ 191 000c 462F      		mov r20,r22
+ 192               	.LVL19:
+ 193 000e 4069      		ori r20,lo8(-112)
+ 194 0010 DC01      		movw r26,r24
+ 195 0012 ED91      		ld r30,X+
+ 196 0014 FC91      		ld r31,X
+ 197 0016 63E0      		ldi r22,lo8(3)
+ 198 0018 70E0      		ldi r23,0
+ 199 001a 0995      		icall
+ 200               	.LVL20:
+ 201               	/* epilogue start */
+  86:tmk_core/protocol/midi/midi.c ****          MIDI_NOTEON | (chan & MIDI_CHANMASK),
+  87:tmk_core/protocol/midi/midi.c ****          num & 0x7F,
+  88:tmk_core/protocol/midi/midi.c ****          vel & 0x7F);
+  89:tmk_core/protocol/midi/midi.c **** }
+ 202               		.loc 1 89 0
+ 203 001c 0F91      		pop r16
+ 204 001e 0895      		ret
+ 205               		.cfi_endproc
+ 206               	.LFE4:
+ 208               		.section	.text.midi_send_noteoff,"ax",@progbits
+ 209               	.global	midi_send_noteoff
+ 211               	midi_send_noteoff:
+ 212               	.LFB5:
+  90:tmk_core/protocol/midi/midi.c **** 
+  91:tmk_core/protocol/midi/midi.c **** void midi_send_noteoff(MidiDevice * device, uint8_t chan, uint8_t num, uint8_t vel){
+ 213               		.loc 1 91 0
+ 214               		.cfi_startproc
+ 215               	.LVL21:
+ 216 0000 0F93      		push r16
+ 217               	.LCFI2:
+ 218               		.cfi_def_cfa_offset 3
+ 219               		.cfi_offset 16, -2
+ 220               	/* prologue: function */
+ 221               	/* frame size = 0 */
+ 222               	/* stack size = 1 */
+ 223               	.L__stack_usage = 1
+  92:tmk_core/protocol/midi/midi.c ****    //Note Data: Note Num, Note Velocity
+  93:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 3,
+ 224               		.loc 1 93 0
+ 225 0002 022F      		mov r16,r18
+ 226 0004 0F77      		andi r16,lo8(127)
+ 227 0006 242F      		mov r18,r20
+ 228               	.LVL22:
+ 229 0008 2F77      		andi r18,lo8(127)
+ 230 000a 6F70      		andi r22,lo8(15)
+ 231               	.LVL23:
+ 232 000c 462F      		mov r20,r22
+ 233               	.LVL24:
+ 234 000e 4068      		ori r20,lo8(-128)
+ 235 0010 DC01      		movw r26,r24
+ 236 0012 ED91      		ld r30,X+
+ 237 0014 FC91      		ld r31,X
+ 238 0016 63E0      		ldi r22,lo8(3)
+ 239 0018 70E0      		ldi r23,0
+ 240 001a 0995      		icall
+ 241               	.LVL25:
+ 242               	/* epilogue start */
+  94:tmk_core/protocol/midi/midi.c ****          MIDI_NOTEOFF | (chan & MIDI_CHANMASK),
+  95:tmk_core/protocol/midi/midi.c ****          num & 0x7F,
+  96:tmk_core/protocol/midi/midi.c ****          vel & 0x7F);
+  97:tmk_core/protocol/midi/midi.c **** }
+ 243               		.loc 1 97 0
+ 244 001c 0F91      		pop r16
+ 245 001e 0895      		ret
+ 246               		.cfi_endproc
+ 247               	.LFE5:
+ 249               		.section	.text.midi_send_aftertouch,"ax",@progbits
+ 250               	.global	midi_send_aftertouch
+ 252               	midi_send_aftertouch:
+ 253               	.LFB6:
+  98:tmk_core/protocol/midi/midi.c **** 
+  99:tmk_core/protocol/midi/midi.c **** void midi_send_aftertouch(MidiDevice * device, uint8_t chan, uint8_t note_num, uint8_t amt){
+ 254               		.loc 1 99 0
+ 255               		.cfi_startproc
+ 256               	.LVL26:
+ 257 0000 0F93      		push r16
+ 258               	.LCFI3:
+ 259               		.cfi_def_cfa_offset 3
+ 260               		.cfi_offset 16, -2
+ 261               	/* prologue: function */
+ 262               	/* frame size = 0 */
+ 263               	/* stack size = 1 */
+ 264               	.L__stack_usage = 1
+ 100:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 3,
+ 265               		.loc 1 100 0
+ 266 0002 022F      		mov r16,r18
+ 267 0004 0F77      		andi r16,lo8(127)
+ 268 0006 242F      		mov r18,r20
+ 269               	.LVL27:
+ 270 0008 2F77      		andi r18,lo8(127)
+ 271 000a 6F70      		andi r22,lo8(15)
+ 272               	.LVL28:
+ 273 000c 462F      		mov r20,r22
+ 274               	.LVL29:
+ 275 000e 406A      		ori r20,lo8(-96)
+ 276 0010 DC01      		movw r26,r24
+ 277 0012 ED91      		ld r30,X+
+ 278 0014 FC91      		ld r31,X
+ 279 0016 63E0      		ldi r22,lo8(3)
+ 280 0018 70E0      		ldi r23,0
+ 281 001a 0995      		icall
+ 282               	.LVL30:
+ 283               	/* epilogue start */
+ 101:tmk_core/protocol/midi/midi.c ****          MIDI_AFTERTOUCH | (chan & MIDI_CHANMASK),
+ 102:tmk_core/protocol/midi/midi.c ****          note_num & 0x7F,
+ 103:tmk_core/protocol/midi/midi.c ****          amt & 0x7F);
+ 104:tmk_core/protocol/midi/midi.c **** }
+ 284               		.loc 1 104 0
+ 285 001c 0F91      		pop r16
+ 286 001e 0895      		ret
+ 287               		.cfi_endproc
+ 288               	.LFE6:
+ 290               		.section	.text.midi_send_pitchbend,"ax",@progbits
+ 291               	.global	midi_send_pitchbend
+ 293               	midi_send_pitchbend:
+ 294               	.LFB7:
+ 105:tmk_core/protocol/midi/midi.c **** 
+ 106:tmk_core/protocol/midi/midi.c **** //XXX does this work right?
+ 107:tmk_core/protocol/midi/midi.c **** //amt in range -0x2000, 0x1fff
+ 108:tmk_core/protocol/midi/midi.c **** //uAmt should be in range..
+ 109:tmk_core/protocol/midi/midi.c **** //0x0000 to 0x3FFF
+ 110:tmk_core/protocol/midi/midi.c **** void midi_send_pitchbend(MidiDevice * device, uint8_t chan, int16_t amt){
+ 295               		.loc 1 110 0
+ 296               		.cfi_startproc
+ 297               	.LVL31:
+ 298 0000 0F93      		push r16
+ 299               	.LCFI4:
+ 300               		.cfi_def_cfa_offset 3
+ 301               		.cfi_offset 16, -2
+ 302 0002 1F93      		push r17
+ 303               	.LCFI5:
+ 304               		.cfi_def_cfa_offset 4
+ 305               		.cfi_offset 17, -3
+ 306               	/* prologue: function */
+ 307               	/* frame size = 0 */
+ 308               	/* stack size = 2 */
+ 309               	.L__stack_usage = 2
+ 111:tmk_core/protocol/midi/midi.c ****    uint16_t uAmt;
+ 112:tmk_core/protocol/midi/midi.c ****    //check range
+ 113:tmk_core/protocol/midi/midi.c ****    if(amt > 0x1fff){
+ 310               		.loc 1 113 0
+ 311 0004 4115      		cp r20,__zero_reg__
+ 312 0006 20E2      		ldi r18,32
+ 313 0008 5207      		cpc r21,r18
+ 314 000a 04F4      		brge .L41
+ 114:tmk_core/protocol/midi/midi.c ****       uAmt = 0x3FFF;
+ 115:tmk_core/protocol/midi/midi.c ****    } else if(amt < -0x2000){
+ 315               		.loc 1 115 0
+ 316 000c 4115      		cp r20,__zero_reg__
+ 317 000e A0EE      		ldi r26,-32
+ 318 0010 5A07      		cpc r21,r26
+ 319 0012 04F0      		brlt .L42
+ 116:tmk_core/protocol/midi/midi.c ****       uAmt = 0;
+ 117:tmk_core/protocol/midi/midi.c ****    } else {
+ 118:tmk_core/protocol/midi/midi.c ****       uAmt = amt + 0x2000;
+ 320               		.loc 1 118 0
+ 321 0014 9A01      		movw r18,r20
+ 322 0016 305E      		subi r19,-32
+ 323               	.LVL32:
+ 324 0018 00C0      		rjmp .L40
+ 325               	.LVL33:
+ 326               	.L41:
+ 114:tmk_core/protocol/midi/midi.c ****       uAmt = 0x3FFF;
+ 327               		.loc 1 114 0
+ 328 001a 2FEF      		ldi r18,lo8(-1)
+ 329 001c 3FE3      		ldi r19,lo8(63)
+ 330 001e 00C0      		rjmp .L40
+ 331               	.L42:
+ 116:tmk_core/protocol/midi/midi.c ****       uAmt = 0;
+ 332               		.loc 1 116 0
+ 333 0020 20E0      		ldi r18,0
+ 334 0022 30E0      		ldi r19,0
+ 335               	.L40:
+ 336               	.LVL34:
+ 119:tmk_core/protocol/midi/midi.c ****    }
+ 120:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 3,
+ 337               		.loc 1 120 0
+ 338 0024 8901      		movw r16,r18
+ 339 0026 000F      		lsl r16
+ 340 0028 012F      		mov r16,r17
+ 341 002a 001F      		rol r16
+ 342 002c 110B      		sbc r17,r17
+ 343 002e 1195      		neg r17
+ 344 0030 2F77      		andi r18,lo8(127)
+ 345               	.LVL35:
+ 346 0032 462F      		mov r20,r22
+ 347               	.LVL36:
+ 348 0034 4F70      		andi r20,lo8(15)
+ 349 0036 406E      		ori r20,lo8(-32)
+ 350 0038 DC01      		movw r26,r24
+ 351 003a ED91      		ld r30,X+
+ 352 003c FC91      		ld r31,X
+ 353 003e 63E0      		ldi r22,lo8(3)
+ 354 0040 70E0      		ldi r23,0
+ 355               	.LVL37:
+ 356 0042 0995      		icall
+ 357               	.LVL38:
+ 358               	/* epilogue start */
+ 121:tmk_core/protocol/midi/midi.c ****          MIDI_PITCHBEND | (chan & MIDI_CHANMASK),
+ 122:tmk_core/protocol/midi/midi.c ****          uAmt & 0x7F,
+ 123:tmk_core/protocol/midi/midi.c ****          (uAmt >> 7) & 0x7F);
+ 124:tmk_core/protocol/midi/midi.c **** }
+ 359               		.loc 1 124 0
+ 360 0044 1F91      		pop r17
+ 361 0046 0F91      		pop r16
+ 362 0048 0895      		ret
+ 363               		.cfi_endproc
+ 364               	.LFE7:
+ 366               		.section	.text.midi_send_programchange,"ax",@progbits
+ 367               	.global	midi_send_programchange
+ 369               	midi_send_programchange:
+ 370               	.LFB8:
+ 125:tmk_core/protocol/midi/midi.c **** 
+ 126:tmk_core/protocol/midi/midi.c **** void midi_send_programchange(MidiDevice * device, uint8_t chan, uint8_t num){
+ 371               		.loc 1 126 0
+ 372               		.cfi_startproc
+ 373               	.LVL39:
+ 374 0000 0F93      		push r16
+ 375               	.LCFI6:
+ 376               		.cfi_def_cfa_offset 3
+ 377               		.cfi_offset 16, -2
+ 378               	/* prologue: function */
+ 379               	/* frame size = 0 */
+ 380               	/* stack size = 1 */
+ 381               	.L__stack_usage = 1
+ 127:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 2,
+ 382               		.loc 1 127 0
+ 383 0002 242F      		mov r18,r20
+ 384 0004 2F77      		andi r18,lo8(127)
+ 385 0006 6F70      		andi r22,lo8(15)
+ 386               	.LVL40:
+ 387 0008 462F      		mov r20,r22
+ 388               	.LVL41:
+ 389 000a 406C      		ori r20,lo8(-64)
+ 390 000c DC01      		movw r26,r24
+ 391 000e ED91      		ld r30,X+
+ 392 0010 FC91      		ld r31,X
+ 393 0012 00E0      		ldi r16,0
+ 394 0014 62E0      		ldi r22,lo8(2)
+ 395 0016 70E0      		ldi r23,0
+ 396 0018 0995      		icall
+ 397               	.LVL42:
+ 398               	/* epilogue start */
+ 128:tmk_core/protocol/midi/midi.c ****          MIDI_PROGCHANGE | (chan & MIDI_CHANMASK),
+ 129:tmk_core/protocol/midi/midi.c ****          num & 0x7F,
+ 130:tmk_core/protocol/midi/midi.c ****          0);
+ 131:tmk_core/protocol/midi/midi.c **** }
+ 399               		.loc 1 131 0
+ 400 001a 0F91      		pop r16
+ 401 001c 0895      		ret
+ 402               		.cfi_endproc
+ 403               	.LFE8:
+ 405               		.section	.text.midi_send_channelpressure,"ax",@progbits
+ 406               	.global	midi_send_channelpressure
+ 408               	midi_send_channelpressure:
+ 409               	.LFB9:
+ 132:tmk_core/protocol/midi/midi.c **** 
+ 133:tmk_core/protocol/midi/midi.c **** void midi_send_channelpressure(MidiDevice * device, uint8_t chan, uint8_t amt){
+ 410               		.loc 1 133 0
+ 411               		.cfi_startproc
+ 412               	.LVL43:
+ 413 0000 0F93      		push r16
+ 414               	.LCFI7:
+ 415               		.cfi_def_cfa_offset 3
+ 416               		.cfi_offset 16, -2
+ 417               	/* prologue: function */
+ 418               	/* frame size = 0 */
+ 419               	/* stack size = 1 */
+ 420               	.L__stack_usage = 1
+ 134:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 2,
+ 421               		.loc 1 134 0
+ 422 0002 242F      		mov r18,r20
+ 423 0004 2F77      		andi r18,lo8(127)
+ 424 0006 6F70      		andi r22,lo8(15)
+ 425               	.LVL44:
+ 426 0008 462F      		mov r20,r22
+ 427               	.LVL45:
+ 428 000a 406D      		ori r20,lo8(-48)
+ 429 000c DC01      		movw r26,r24
+ 430 000e ED91      		ld r30,X+
+ 431 0010 FC91      		ld r31,X
+ 432 0012 00E0      		ldi r16,0
+ 433 0014 62E0      		ldi r22,lo8(2)
+ 434 0016 70E0      		ldi r23,0
+ 435 0018 0995      		icall
+ 436               	.LVL46:
+ 437               	/* epilogue start */
+ 135:tmk_core/protocol/midi/midi.c ****          MIDI_CHANPRESSURE | (chan & MIDI_CHANMASK),
+ 136:tmk_core/protocol/midi/midi.c ****          amt & 0x7F,
+ 137:tmk_core/protocol/midi/midi.c ****          0);
+ 138:tmk_core/protocol/midi/midi.c **** }
+ 438               		.loc 1 138 0
+ 439 001a 0F91      		pop r16
+ 440 001c 0895      		ret
+ 441               		.cfi_endproc
+ 442               	.LFE9:
+ 444               		.section	.text.midi_send_clock,"ax",@progbits
+ 445               	.global	midi_send_clock
+ 447               	midi_send_clock:
+ 448               	.LFB10:
+ 139:tmk_core/protocol/midi/midi.c **** 
+ 140:tmk_core/protocol/midi/midi.c **** void midi_send_clock(MidiDevice * device){
+ 449               		.loc 1 140 0
+ 450               		.cfi_startproc
+ 451               	.LVL47:
+ 452 0000 0F93      		push r16
+ 453               	.LCFI8:
+ 454               		.cfi_def_cfa_offset 3
+ 455               		.cfi_offset 16, -2
+ 456               	/* prologue: function */
+ 457               	/* frame size = 0 */
+ 458               	/* stack size = 1 */
+ 459               	.L__stack_usage = 1
+ 141:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 1, MIDI_CLOCK, 0, 0);
+ 460               		.loc 1 141 0
+ 461 0002 DC01      		movw r26,r24
+ 462 0004 ED91      		ld r30,X+
+ 463 0006 FC91      		ld r31,X
+ 464 0008 00E0      		ldi r16,0
+ 465 000a 20E0      		ldi r18,0
+ 466 000c 48EF      		ldi r20,lo8(-8)
+ 467 000e 61E0      		ldi r22,lo8(1)
+ 468 0010 70E0      		ldi r23,0
+ 469 0012 0995      		icall
+ 470               	.LVL48:
+ 471               	/* epilogue start */
+ 142:tmk_core/protocol/midi/midi.c **** }
+ 472               		.loc 1 142 0
+ 473 0014 0F91      		pop r16
+ 474 0016 0895      		ret
+ 475               		.cfi_endproc
+ 476               	.LFE10:
+ 478               		.section	.text.midi_send_tick,"ax",@progbits
+ 479               	.global	midi_send_tick
+ 481               	midi_send_tick:
+ 482               	.LFB11:
+ 143:tmk_core/protocol/midi/midi.c **** 
+ 144:tmk_core/protocol/midi/midi.c **** void midi_send_tick(MidiDevice * device){
+ 483               		.loc 1 144 0
+ 484               		.cfi_startproc
+ 485               	.LVL49:
+ 486 0000 0F93      		push r16
+ 487               	.LCFI9:
+ 488               		.cfi_def_cfa_offset 3
+ 489               		.cfi_offset 16, -2
+ 490               	/* prologue: function */
+ 491               	/* frame size = 0 */
+ 492               	/* stack size = 1 */
+ 493               	.L__stack_usage = 1
+ 145:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 1, MIDI_TICK, 0, 0);
+ 494               		.loc 1 145 0
+ 495 0002 DC01      		movw r26,r24
+ 496 0004 ED91      		ld r30,X+
+ 497 0006 FC91      		ld r31,X
+ 498 0008 00E0      		ldi r16,0
+ 499 000a 20E0      		ldi r18,0
+ 500 000c 49EF      		ldi r20,lo8(-7)
+ 501 000e 61E0      		ldi r22,lo8(1)
+ 502 0010 70E0      		ldi r23,0
+ 503 0012 0995      		icall
+ 504               	.LVL50:
+ 505               	/* epilogue start */
+ 146:tmk_core/protocol/midi/midi.c **** }
+ 506               		.loc 1 146 0
+ 507 0014 0F91      		pop r16
+ 508 0016 0895      		ret
+ 509               		.cfi_endproc
+ 510               	.LFE11:
+ 512               		.section	.text.midi_send_start,"ax",@progbits
+ 513               	.global	midi_send_start
+ 515               	midi_send_start:
+ 516               	.LFB12:
+ 147:tmk_core/protocol/midi/midi.c **** 
+ 148:tmk_core/protocol/midi/midi.c **** void midi_send_start(MidiDevice * device){
+ 517               		.loc 1 148 0
+ 518               		.cfi_startproc
+ 519               	.LVL51:
+ 520 0000 0F93      		push r16
+ 521               	.LCFI10:
+ 522               		.cfi_def_cfa_offset 3
+ 523               		.cfi_offset 16, -2
+ 524               	/* prologue: function */
+ 525               	/* frame size = 0 */
+ 526               	/* stack size = 1 */
+ 527               	.L__stack_usage = 1
+ 149:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 1, MIDI_START, 0, 0);
+ 528               		.loc 1 149 0
+ 529 0002 DC01      		movw r26,r24
+ 530 0004 ED91      		ld r30,X+
+ 531 0006 FC91      		ld r31,X
+ 532 0008 00E0      		ldi r16,0
+ 533 000a 20E0      		ldi r18,0
+ 534 000c 4AEF      		ldi r20,lo8(-6)
+ 535 000e 61E0      		ldi r22,lo8(1)
+ 536 0010 70E0      		ldi r23,0
+ 537 0012 0995      		icall
+ 538               	.LVL52:
+ 539               	/* epilogue start */
+ 150:tmk_core/protocol/midi/midi.c **** }
+ 540               		.loc 1 150 0
+ 541 0014 0F91      		pop r16
+ 542 0016 0895      		ret
+ 543               		.cfi_endproc
+ 544               	.LFE12:
+ 546               		.section	.text.midi_send_continue,"ax",@progbits
+ 547               	.global	midi_send_continue
+ 549               	midi_send_continue:
+ 550               	.LFB13:
+ 151:tmk_core/protocol/midi/midi.c **** 
+ 152:tmk_core/protocol/midi/midi.c **** void midi_send_continue(MidiDevice * device){
+ 551               		.loc 1 152 0
+ 552               		.cfi_startproc
+ 553               	.LVL53:
+ 554 0000 0F93      		push r16
+ 555               	.LCFI11:
+ 556               		.cfi_def_cfa_offset 3
+ 557               		.cfi_offset 16, -2
+ 558               	/* prologue: function */
+ 559               	/* frame size = 0 */
+ 560               	/* stack size = 1 */
+ 561               	.L__stack_usage = 1
+ 153:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 1, MIDI_CONTINUE, 0, 0);
+ 562               		.loc 1 153 0
+ 563 0002 DC01      		movw r26,r24
+ 564 0004 ED91      		ld r30,X+
+ 565 0006 FC91      		ld r31,X
+ 566 0008 00E0      		ldi r16,0
+ 567 000a 20E0      		ldi r18,0
+ 568 000c 4BEF      		ldi r20,lo8(-5)
+ 569 000e 61E0      		ldi r22,lo8(1)
+ 570 0010 70E0      		ldi r23,0
+ 571 0012 0995      		icall
+ 572               	.LVL54:
+ 573               	/* epilogue start */
+ 154:tmk_core/protocol/midi/midi.c **** }
+ 574               		.loc 1 154 0
+ 575 0014 0F91      		pop r16
+ 576 0016 0895      		ret
+ 577               		.cfi_endproc
+ 578               	.LFE13:
+ 580               		.section	.text.midi_send_stop,"ax",@progbits
+ 581               	.global	midi_send_stop
+ 583               	midi_send_stop:
+ 584               	.LFB14:
+ 155:tmk_core/protocol/midi/midi.c **** 
+ 156:tmk_core/protocol/midi/midi.c **** void midi_send_stop(MidiDevice * device){
+ 585               		.loc 1 156 0
+ 586               		.cfi_startproc
+ 587               	.LVL55:
+ 588 0000 0F93      		push r16
+ 589               	.LCFI12:
+ 590               		.cfi_def_cfa_offset 3
+ 591               		.cfi_offset 16, -2
+ 592               	/* prologue: function */
+ 593               	/* frame size = 0 */
+ 594               	/* stack size = 1 */
+ 595               	.L__stack_usage = 1
+ 157:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 1, MIDI_STOP, 0, 0);
+ 596               		.loc 1 157 0
+ 597 0002 DC01      		movw r26,r24
+ 598 0004 ED91      		ld r30,X+
+ 599 0006 FC91      		ld r31,X
+ 600 0008 00E0      		ldi r16,0
+ 601 000a 20E0      		ldi r18,0
+ 602 000c 4CEF      		ldi r20,lo8(-4)
+ 603 000e 61E0      		ldi r22,lo8(1)
+ 604 0010 70E0      		ldi r23,0
+ 605 0012 0995      		icall
+ 606               	.LVL56:
+ 607               	/* epilogue start */
+ 158:tmk_core/protocol/midi/midi.c **** }
+ 608               		.loc 1 158 0
+ 609 0014 0F91      		pop r16
+ 610 0016 0895      		ret
+ 611               		.cfi_endproc
+ 612               	.LFE14:
+ 614               		.section	.text.midi_send_activesense,"ax",@progbits
+ 615               	.global	midi_send_activesense
+ 617               	midi_send_activesense:
+ 618               	.LFB15:
+ 159:tmk_core/protocol/midi/midi.c **** 
+ 160:tmk_core/protocol/midi/midi.c **** void midi_send_activesense(MidiDevice * device){
+ 619               		.loc 1 160 0
+ 620               		.cfi_startproc
+ 621               	.LVL57:
+ 622 0000 0F93      		push r16
+ 623               	.LCFI13:
+ 624               		.cfi_def_cfa_offset 3
+ 625               		.cfi_offset 16, -2
+ 626               	/* prologue: function */
+ 627               	/* frame size = 0 */
+ 628               	/* stack size = 1 */
+ 629               	.L__stack_usage = 1
+ 161:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 1, MIDI_ACTIVESENSE, 0, 0);
+ 630               		.loc 1 161 0
+ 631 0002 DC01      		movw r26,r24
+ 632 0004 ED91      		ld r30,X+
+ 633 0006 FC91      		ld r31,X
+ 634 0008 00E0      		ldi r16,0
+ 635 000a 20E0      		ldi r18,0
+ 636 000c 4EEF      		ldi r20,lo8(-2)
+ 637 000e 61E0      		ldi r22,lo8(1)
+ 638 0010 70E0      		ldi r23,0
+ 639 0012 0995      		icall
+ 640               	.LVL58:
+ 641               	/* epilogue start */
+ 162:tmk_core/protocol/midi/midi.c **** }
+ 642               		.loc 1 162 0
+ 643 0014 0F91      		pop r16
+ 644 0016 0895      		ret
+ 645               		.cfi_endproc
+ 646               	.LFE15:
+ 648               		.section	.text.midi_send_reset,"ax",@progbits
+ 649               	.global	midi_send_reset
+ 651               	midi_send_reset:
+ 652               	.LFB16:
+ 163:tmk_core/protocol/midi/midi.c **** 
+ 164:tmk_core/protocol/midi/midi.c **** void midi_send_reset(MidiDevice * device){
+ 653               		.loc 1 164 0
+ 654               		.cfi_startproc
+ 655               	.LVL59:
+ 656 0000 0F93      		push r16
+ 657               	.LCFI14:
+ 658               		.cfi_def_cfa_offset 3
+ 659               		.cfi_offset 16, -2
+ 660               	/* prologue: function */
+ 661               	/* frame size = 0 */
+ 662               	/* stack size = 1 */
+ 663               	.L__stack_usage = 1
+ 165:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 1, MIDI_RESET, 0, 0);
+ 664               		.loc 1 165 0
+ 665 0002 DC01      		movw r26,r24
+ 666 0004 ED91      		ld r30,X+
+ 667 0006 FC91      		ld r31,X
+ 668 0008 00E0      		ldi r16,0
+ 669 000a 20E0      		ldi r18,0
+ 670 000c 4FEF      		ldi r20,lo8(-1)
+ 671 000e 61E0      		ldi r22,lo8(1)
+ 672 0010 70E0      		ldi r23,0
+ 673 0012 0995      		icall
+ 674               	.LVL60:
+ 675               	/* epilogue start */
+ 166:tmk_core/protocol/midi/midi.c **** }
+ 676               		.loc 1 166 0
+ 677 0014 0F91      		pop r16
+ 678 0016 0895      		ret
+ 679               		.cfi_endproc
+ 680               	.LFE16:
+ 682               		.section	.text.midi_send_tcquarterframe,"ax",@progbits
+ 683               	.global	midi_send_tcquarterframe
+ 685               	midi_send_tcquarterframe:
+ 686               	.LFB17:
+ 167:tmk_core/protocol/midi/midi.c **** 
+ 168:tmk_core/protocol/midi/midi.c **** void midi_send_tcquarterframe(MidiDevice * device, uint8_t time){
+ 687               		.loc 1 168 0
+ 688               		.cfi_startproc
+ 689               	.LVL61:
+ 690 0000 0F93      		push r16
+ 691               	.LCFI15:
+ 692               		.cfi_def_cfa_offset 3
+ 693               		.cfi_offset 16, -2
+ 694               	/* prologue: function */
+ 695               	/* frame size = 0 */
+ 696               	/* stack size = 1 */
+ 697               	.L__stack_usage = 1
+ 169:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 2,
+ 698               		.loc 1 169 0
+ 699 0002 262F      		mov r18,r22
+ 700 0004 2F77      		andi r18,lo8(127)
+ 701 0006 DC01      		movw r26,r24
+ 702 0008 ED91      		ld r30,X+
+ 703 000a FC91      		ld r31,X
+ 704 000c 00E0      		ldi r16,0
+ 705 000e 41EF      		ldi r20,lo8(-15)
+ 706 0010 62E0      		ldi r22,lo8(2)
+ 707 0012 70E0      		ldi r23,0
+ 708               	.LVL62:
+ 709 0014 0995      		icall
+ 710               	.LVL63:
+ 711               	/* epilogue start */
+ 170:tmk_core/protocol/midi/midi.c ****          MIDI_TC_QUARTERFRAME,
+ 171:tmk_core/protocol/midi/midi.c ****          time & 0x7F,
+ 172:tmk_core/protocol/midi/midi.c ****          0);
+ 173:tmk_core/protocol/midi/midi.c **** }
+ 712               		.loc 1 173 0
+ 713 0016 0F91      		pop r16
+ 714 0018 0895      		ret
+ 715               		.cfi_endproc
+ 716               	.LFE17:
+ 718               		.section	.text.midi_send_songposition,"ax",@progbits
+ 719               	.global	midi_send_songposition
+ 721               	midi_send_songposition:
+ 722               	.LFB18:
+ 174:tmk_core/protocol/midi/midi.c **** 
+ 175:tmk_core/protocol/midi/midi.c **** //XXX is this right?
+ 176:tmk_core/protocol/midi/midi.c **** void midi_send_songposition(MidiDevice * device, uint16_t pos){
+ 723               		.loc 1 176 0
+ 724               		.cfi_startproc
+ 725               	.LVL64:
+ 726 0000 0F93      		push r16
+ 727               	.LCFI16:
+ 728               		.cfi_def_cfa_offset 3
+ 729               		.cfi_offset 16, -2
+ 730 0002 1F93      		push r17
+ 731               	.LCFI17:
+ 732               		.cfi_def_cfa_offset 4
+ 733               		.cfi_offset 17, -3
+ 734               	/* prologue: function */
+ 735               	/* frame size = 0 */
+ 736               	/* stack size = 2 */
+ 737               	.L__stack_usage = 2
+ 177:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 3,
+ 738               		.loc 1 177 0
+ 739 0004 8B01      		movw r16,r22
+ 740 0006 000F      		lsl r16
+ 741 0008 012F      		mov r16,r17
+ 742 000a 001F      		rol r16
+ 743 000c 110B      		sbc r17,r17
+ 744 000e 1195      		neg r17
+ 745 0010 0F77      		andi r16,lo8(127)
+ 746 0012 262F      		mov r18,r22
+ 747 0014 2F77      		andi r18,lo8(127)
+ 748 0016 DC01      		movw r26,r24
+ 749 0018 ED91      		ld r30,X+
+ 750 001a FC91      		ld r31,X
+ 751 001c 42EF      		ldi r20,lo8(-14)
+ 752 001e 63E0      		ldi r22,lo8(3)
+ 753 0020 70E0      		ldi r23,0
+ 754               	.LVL65:
+ 755 0022 0995      		icall
+ 756               	.LVL66:
+ 757               	/* epilogue start */
+ 178:tmk_core/protocol/midi/midi.c ****          MIDI_SONGPOSITION,
+ 179:tmk_core/protocol/midi/midi.c ****          pos & 0x7F,
+ 180:tmk_core/protocol/midi/midi.c ****          (pos >> 7) & 0x7F);
+ 181:tmk_core/protocol/midi/midi.c **** }
+ 758               		.loc 1 181 0
+ 759 0024 1F91      		pop r17
+ 760 0026 0F91      		pop r16
+ 761 0028 0895      		ret
+ 762               		.cfi_endproc
+ 763               	.LFE18:
+ 765               		.section	.text.midi_send_songselect,"ax",@progbits
+ 766               	.global	midi_send_songselect
+ 768               	midi_send_songselect:
+ 769               	.LFB19:
+ 182:tmk_core/protocol/midi/midi.c **** 
+ 183:tmk_core/protocol/midi/midi.c **** void midi_send_songselect(MidiDevice * device, uint8_t song){
+ 770               		.loc 1 183 0
+ 771               		.cfi_startproc
+ 772               	.LVL67:
+ 773 0000 0F93      		push r16
+ 774               	.LCFI18:
+ 775               		.cfi_def_cfa_offset 3
+ 776               		.cfi_offset 16, -2
+ 777               	/* prologue: function */
+ 778               	/* frame size = 0 */
+ 779               	/* stack size = 1 */
+ 780               	.L__stack_usage = 1
+ 184:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 2,
+ 781               		.loc 1 184 0
+ 782 0002 262F      		mov r18,r22
+ 783 0004 2F77      		andi r18,lo8(127)
+ 784 0006 DC01      		movw r26,r24
+ 785 0008 ED91      		ld r30,X+
+ 786 000a FC91      		ld r31,X
+ 787 000c 00E0      		ldi r16,0
+ 788 000e 43EF      		ldi r20,lo8(-13)
+ 789 0010 62E0      		ldi r22,lo8(2)
+ 790 0012 70E0      		ldi r23,0
+ 791               	.LVL68:
+ 792 0014 0995      		icall
+ 793               	.LVL69:
+ 794               	/* epilogue start */
+ 185:tmk_core/protocol/midi/midi.c ****          MIDI_SONGSELECT,
+ 186:tmk_core/protocol/midi/midi.c ****          song & 0x7F,
+ 187:tmk_core/protocol/midi/midi.c ****          0);
+ 188:tmk_core/protocol/midi/midi.c **** }
+ 795               		.loc 1 188 0
+ 796 0016 0F91      		pop r16
+ 797 0018 0895      		ret
+ 798               		.cfi_endproc
+ 799               	.LFE19:
+ 801               		.section	.text.midi_send_tunerequest,"ax",@progbits
+ 802               	.global	midi_send_tunerequest
+ 804               	midi_send_tunerequest:
+ 805               	.LFB20:
+ 189:tmk_core/protocol/midi/midi.c **** 
+ 190:tmk_core/protocol/midi/midi.c **** void midi_send_tunerequest(MidiDevice * device){
+ 806               		.loc 1 190 0
+ 807               		.cfi_startproc
+ 808               	.LVL70:
+ 809 0000 0F93      		push r16
+ 810               	.LCFI19:
+ 811               		.cfi_def_cfa_offset 3
+ 812               		.cfi_offset 16, -2
+ 813               	/* prologue: function */
+ 814               	/* frame size = 0 */
+ 815               	/* stack size = 1 */
+ 816               	.L__stack_usage = 1
+ 191:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 1, MIDI_TUNEREQUEST, 0, 0);
+ 817               		.loc 1 191 0
+ 818 0002 DC01      		movw r26,r24
+ 819 0004 ED91      		ld r30,X+
+ 820 0006 FC91      		ld r31,X
+ 821 0008 00E0      		ldi r16,0
+ 822 000a 20E0      		ldi r18,0
+ 823 000c 46EF      		ldi r20,lo8(-10)
+ 824 000e 61E0      		ldi r22,lo8(1)
+ 825 0010 70E0      		ldi r23,0
+ 826 0012 0995      		icall
+ 827               	.LVL71:
+ 828               	/* epilogue start */
+ 192:tmk_core/protocol/midi/midi.c **** }
+ 829               		.loc 1 192 0
+ 830 0014 0F91      		pop r16
+ 831 0016 0895      		ret
+ 832               		.cfi_endproc
+ 833               	.LFE20:
+ 835               		.section	.text.midi_send_byte,"ax",@progbits
+ 836               	.global	midi_send_byte
+ 838               	midi_send_byte:
+ 839               	.LFB21:
+ 193:tmk_core/protocol/midi/midi.c **** 
+ 194:tmk_core/protocol/midi/midi.c **** void midi_send_byte(MidiDevice * device, uint8_t b){
+ 840               		.loc 1 194 0
+ 841               		.cfi_startproc
+ 842               	.LVL72:
+ 843 0000 0F93      		push r16
+ 844               	.LCFI20:
+ 845               		.cfi_def_cfa_offset 3
+ 846               		.cfi_offset 16, -2
+ 847               	/* prologue: function */
+ 848               	/* frame size = 0 */
+ 849               	/* stack size = 1 */
+ 850               	.L__stack_usage = 1
+ 851 0002 462F      		mov r20,r22
+ 195:tmk_core/protocol/midi/midi.c ****    device->send_func(device, 1, b, 0, 0);
+ 852               		.loc 1 195 0
+ 853 0004 DC01      		movw r26,r24
+ 854 0006 ED91      		ld r30,X+
+ 855 0008 FC91      		ld r31,X
+ 856 000a 00E0      		ldi r16,0
+ 857 000c 20E0      		ldi r18,0
+ 858 000e 61E0      		ldi r22,lo8(1)
+ 859 0010 70E0      		ldi r23,0
+ 860               	.LVL73:
+ 861 0012 0995      		icall
+ 862               	.LVL74:
+ 863               	/* epilogue start */
+ 196:tmk_core/protocol/midi/midi.c **** }
+ 864               		.loc 1 196 0
+ 865 0014 0F91      		pop r16
+ 866 0016 0895      		ret
+ 867               		.cfi_endproc
+ 868               	.LFE21:
+ 870               		.section	.text.midi_send_data,"ax",@progbits
+ 871               	.global	midi_send_data
+ 873               	midi_send_data:
+ 874               	.LFB22:
+ 197:tmk_core/protocol/midi/midi.c **** 
+ 198:tmk_core/protocol/midi/midi.c **** void midi_send_data(MidiDevice * device, uint16_t count, uint8_t byte0, uint8_t byte1, uint8_t byte
+ 875               		.loc 1 198 0
+ 876               		.cfi_startproc
+ 877               	.LVL75:
+ 878 0000 0F93      		push r16
+ 879               	.LCFI21:
+ 880               		.cfi_def_cfa_offset 3
+ 881               		.cfi_offset 16, -2
+ 882               	/* prologue: function */
+ 883               	/* frame size = 0 */
+ 884               	/* stack size = 1 */
+ 885               	.L__stack_usage = 1
+ 199:tmk_core/protocol/midi/midi.c ****    //ensure that the count passed along is always 3 or lower
+ 200:tmk_core/protocol/midi/midi.c ****    if (count > 3) {
+ 201:tmk_core/protocol/midi/midi.c ****       //TODO how to do this correctly?
+ 202:tmk_core/protocol/midi/midi.c ****    }
+ 203:tmk_core/protocol/midi/midi.c ****    device->send_func(device, count, byte0, byte1, byte2);
+ 886               		.loc 1 203 0
+ 887 0002 DC01      		movw r26,r24
+ 888 0004 ED91      		ld r30,X+
+ 889 0006 FC91      		ld r31,X
+ 890 0008 0995      		icall
+ 891               	.LVL76:
+ 892               	/* epilogue start */
+ 204:tmk_core/protocol/midi/midi.c **** }
+ 893               		.loc 1 204 0
+ 894 000a 0F91      		pop r16
+ 895               	.LVL77:
+ 896 000c 0895      		ret
+ 897               		.cfi_endproc
+ 898               	.LFE22:
+ 900               		.section	.text.midi_send_array,"ax",@progbits
+ 901               	.global	midi_send_array
+ 903               	midi_send_array:
+ 904               	.LFB23:
+ 205:tmk_core/protocol/midi/midi.c **** 
+ 206:tmk_core/protocol/midi/midi.c **** void midi_send_array(MidiDevice * device, uint16_t count, uint8_t * array) {
+ 905               		.loc 1 206 0
+ 906               		.cfi_startproc
+ 907               	.LVL78:
+ 908 0000 6F92      		push r6
+ 909               	.LCFI22:
+ 910               		.cfi_def_cfa_offset 3
+ 911               		.cfi_offset 6, -2
+ 912 0002 7F92      		push r7
+ 913               	.LCFI23:
+ 914               		.cfi_def_cfa_offset 4
+ 915               		.cfi_offset 7, -3
+ 916 0004 8F92      		push r8
+ 917               	.LCFI24:
+ 918               		.cfi_def_cfa_offset 5
+ 919               		.cfi_offset 8, -4
+ 920 0006 9F92      		push r9
+ 921               	.LCFI25:
+ 922               		.cfi_def_cfa_offset 6
+ 923               		.cfi_offset 9, -5
+ 924 0008 AF92      		push r10
+ 925               	.LCFI26:
+ 926               		.cfi_def_cfa_offset 7
+ 927               		.cfi_offset 10, -6
+ 928 000a BF92      		push r11
+ 929               	.LCFI27:
+ 930               		.cfi_def_cfa_offset 8
+ 931               		.cfi_offset 11, -7
+ 932 000c CF92      		push r12
+ 933               	.LCFI28:
+ 934               		.cfi_def_cfa_offset 9
+ 935               		.cfi_offset 12, -8
+ 936 000e DF92      		push r13
+ 937               	.LCFI29:
+ 938               		.cfi_def_cfa_offset 10
+ 939               		.cfi_offset 13, -9
+ 940 0010 EF92      		push r14
+ 941               	.LCFI30:
+ 942               		.cfi_def_cfa_offset 11
+ 943               		.cfi_offset 14, -10
+ 944 0012 FF92      		push r15
+ 945               	.LCFI31:
+ 946               		.cfi_def_cfa_offset 12
+ 947               		.cfi_offset 15, -11
+ 948 0014 0F93      		push r16
+ 949               	.LCFI32:
+ 950               		.cfi_def_cfa_offset 13
+ 951               		.cfi_offset 16, -12
+ 952 0016 CF93      		push r28
+ 953               	.LCFI33:
+ 954               		.cfi_def_cfa_offset 14
+ 955               		.cfi_offset 28, -13
+ 956 0018 DF93      		push r29
+ 957               	.LCFI34:
+ 958               		.cfi_def_cfa_offset 15
+ 959               		.cfi_offset 29, -14
+ 960 001a 00D0      		rcall .
+ 961 001c 1F92      		push __zero_reg__
+ 962               	.LCFI35:
+ 963               		.cfi_def_cfa_offset 18
+ 964 001e CDB7      		in r28,__SP_L__
+ 965 0020 DEB7      		in r29,__SP_H__
+ 966               	.LCFI36:
+ 967               		.cfi_def_cfa_register 28
+ 968               	/* prologue: function */
+ 969               	/* frame size = 3 */
+ 970               	/* stack size = 16 */
+ 971               	.L__stack_usage = 16
+ 972 0022 4C01      		movw r8,r24
+ 973 0024 5B01      		movw r10,r22
+ 974 0026 3A01      		movw r6,r20
+ 975               	.LVL79:
+ 207:tmk_core/protocol/midi/midi.c ****   uint16_t i;
+ 208:tmk_core/protocol/midi/midi.c ****   for (i = 0; i < count; i += 3) {
+ 976               		.loc 1 208 0
+ 977 0028 E12C      		mov r14,__zero_reg__
+ 978 002a F12C      		mov r15,__zero_reg__
+ 979               	.LVL80:
+ 980               	.L59:
+ 981               		.loc 1 208 0 is_stmt 0 discriminator 1
+ 982 002c EA14      		cp r14,r10
+ 983 002e FB04      		cpc r15,r11
+ 984 0030 00F4      		brsh .L62
+ 985               	.LBB2:
+ 209:tmk_core/protocol/midi/midi.c ****     uint8_t b[3] = { 0, 0, 0 };
+ 986               		.loc 1 209 0 is_stmt 1 discriminator 3
+ 987 0032 1982      		std Y+1,__zero_reg__
+ 988 0034 1A82      		std Y+2,__zero_reg__
+ 989 0036 1B82      		std Y+3,__zero_reg__
+ 990               	.LVL81:
+ 210:tmk_core/protocol/midi/midi.c ****     uint16_t to_send = count - i;
+ 211:tmk_core/protocol/midi/midi.c ****     to_send = (to_send > 3) ? 3 : to_send;
+ 991               		.loc 1 211 0 discriminator 3
+ 992 0038 6501      		movw r12,r10
+ 993 003a CE18      		sub r12,r14
+ 994 003c DF08      		sbc r13,r15
+ 995               	.LVL82:
+ 996 003e 84E0      		ldi r24,4
+ 997 0040 C816      		cp r12,r24
+ 998 0042 D104      		cpc r13,__zero_reg__
+ 999 0044 00F0      		brlo .L60
+ 1000 0046 83E0      		ldi r24,lo8(3)
+ 1001 0048 C82E      		mov r12,r24
+ 1002 004a D12C      		mov r13,__zero_reg__
+ 1003               	.LVL83:
+ 1004               	.L60:
+ 212:tmk_core/protocol/midi/midi.c ****     memcpy(b, array + i, to_send);
+ 1005               		.loc 1 212 0 discriminator 3
+ 1006 004c B301      		movw r22,r6
+ 1007 004e 6E0D      		add r22,r14
+ 1008 0050 7F1D      		adc r23,r15
+ 1009 0052 A601      		movw r20,r12
+ 1010 0054 CE01      		movw r24,r28
+ 1011 0056 0196      		adiw r24,1
+ 1012 0058 0E94 0000 		call memcpy
+ 1013               	.LVL84:
+ 213:tmk_core/protocol/midi/midi.c ****     midi_send_data(device, to_send, b[0], b[1], b[2]);
+ 1014               		.loc 1 213 0 discriminator 3
+ 1015 005c 0B81      		ldd r16,Y+3
+ 1016 005e 2A81      		ldd r18,Y+2
+ 1017 0060 4981      		ldd r20,Y+1
+ 1018 0062 B601      		movw r22,r12
+ 1019 0064 C401      		movw r24,r8
+ 1020 0066 0E94 0000 		call midi_send_data
+ 1021               	.LVL85:
+ 1022               	.LBE2:
+ 208:tmk_core/protocol/midi/midi.c ****     uint8_t b[3] = { 0, 0, 0 };
+ 1023               		.loc 1 208 0 discriminator 3
+ 1024 006a 83E0      		ldi r24,3
+ 1025 006c E80E      		add r14,r24
+ 1026 006e F11C      		adc r15,__zero_reg__
+ 1027               	.LVL86:
+ 1028 0070 00C0      		rjmp .L59
+ 1029               	.LVL87:
+ 1030               	.L62:
+ 1031               	/* epilogue start */
+ 214:tmk_core/protocol/midi/midi.c ****   }
+ 215:tmk_core/protocol/midi/midi.c **** }
+ 1032               		.loc 1 215 0
+ 1033 0072 0F90      		pop __tmp_reg__
+ 1034 0074 0F90      		pop __tmp_reg__
+ 1035 0076 0F90      		pop __tmp_reg__
+ 1036 0078 DF91      		pop r29
+ 1037 007a CF91      		pop r28
+ 1038 007c 0F91      		pop r16
+ 1039 007e FF90      		pop r15
+ 1040 0080 EF90      		pop r14
+ 1041               	.LVL88:
+ 1042 0082 DF90      		pop r13
+ 1043 0084 CF90      		pop r12
+ 1044 0086 BF90      		pop r11
+ 1045 0088 AF90      		pop r10
+ 1046               	.LVL89:
+ 1047 008a 9F90      		pop r9
+ 1048 008c 8F90      		pop r8
+ 1049               	.LVL90:
+ 1050 008e 7F90      		pop r7
+ 1051 0090 6F90      		pop r6
+ 1052               	.LVL91:
+ 1053 0092 0895      		ret
+ 1054               		.cfi_endproc
+ 1055               	.LFE23:
+ 1057               		.section	.text.midi_register_cc_callback,"ax",@progbits
+ 1058               	.global	midi_register_cc_callback
+ 1060               	midi_register_cc_callback:
+ 1061               	.LFB24:
+ 216:tmk_core/protocol/midi/midi.c **** 
+ 217:tmk_core/protocol/midi/midi.c **** 
+ 218:tmk_core/protocol/midi/midi.c **** void midi_register_cc_callback(MidiDevice * device, midi_three_byte_func_t func){
+ 1062               		.loc 1 218 0
+ 1063               		.cfi_startproc
+ 1064               	.LVL92:
+ 1065               	/* prologue: function */
+ 1066               	/* frame size = 0 */
+ 1067               	/* stack size = 0 */
+ 1068               	.L__stack_usage = 0
+ 219:tmk_core/protocol/midi/midi.c ****    device->input_cc_callback = func;
+ 1069               		.loc 1 219 0
+ 1070 0000 FC01      		movw r30,r24
+ 1071 0002 7383      		std Z+3,r23
+ 1072 0004 6283      		std Z+2,r22
+ 1073 0006 0895      		ret
+ 1074               		.cfi_endproc
+ 1075               	.LFE24:
+ 1077               		.section	.text.midi_register_noteon_callback,"ax",@progbits
+ 1078               	.global	midi_register_noteon_callback
+ 1080               	midi_register_noteon_callback:
+ 1081               	.LFB25:
+ 220:tmk_core/protocol/midi/midi.c **** }
+ 221:tmk_core/protocol/midi/midi.c **** 
+ 222:tmk_core/protocol/midi/midi.c **** void midi_register_noteon_callback(MidiDevice * device, midi_three_byte_func_t func){
+ 1082               		.loc 1 222 0
+ 1083               		.cfi_startproc
+ 1084               	.LVL93:
+ 1085               	/* prologue: function */
+ 1086               	/* frame size = 0 */
+ 1087               	/* stack size = 0 */
+ 1088               	.L__stack_usage = 0
+ 223:tmk_core/protocol/midi/midi.c ****    device->input_noteon_callback = func;
+ 1089               		.loc 1 223 0
+ 1090 0000 FC01      		movw r30,r24
+ 1091 0002 7583      		std Z+5,r23
+ 1092 0004 6483      		std Z+4,r22
+ 1093 0006 0895      		ret
+ 1094               		.cfi_endproc
+ 1095               	.LFE25:
+ 1097               		.section	.text.midi_register_noteoff_callback,"ax",@progbits
+ 1098               	.global	midi_register_noteoff_callback
+ 1100               	midi_register_noteoff_callback:
+ 1101               	.LFB26:
+ 224:tmk_core/protocol/midi/midi.c **** }
+ 225:tmk_core/protocol/midi/midi.c **** 
+ 226:tmk_core/protocol/midi/midi.c **** void midi_register_noteoff_callback(MidiDevice * device, midi_three_byte_func_t func){
+ 1102               		.loc 1 226 0
+ 1103               		.cfi_startproc
+ 1104               	.LVL94:
+ 1105               	/* prologue: function */
+ 1106               	/* frame size = 0 */
+ 1107               	/* stack size = 0 */
+ 1108               	.L__stack_usage = 0
+ 227:tmk_core/protocol/midi/midi.c ****    device->input_noteoff_callback = func;
+ 1109               		.loc 1 227 0
+ 1110 0000 FC01      		movw r30,r24
+ 1111 0002 7783      		std Z+7,r23
+ 1112 0004 6683      		std Z+6,r22
+ 1113 0006 0895      		ret
+ 1114               		.cfi_endproc
+ 1115               	.LFE26:
+ 1117               		.section	.text.midi_register_aftertouch_callback,"ax",@progbits
+ 1118               	.global	midi_register_aftertouch_callback
+ 1120               	midi_register_aftertouch_callback:
+ 1121               	.LFB27:
+ 228:tmk_core/protocol/midi/midi.c **** }
+ 229:tmk_core/protocol/midi/midi.c **** 
+ 230:tmk_core/protocol/midi/midi.c **** void midi_register_aftertouch_callback(MidiDevice * device, midi_three_byte_func_t func){
+ 1122               		.loc 1 230 0
+ 1123               		.cfi_startproc
+ 1124               	.LVL95:
+ 1125               	/* prologue: function */
+ 1126               	/* frame size = 0 */
+ 1127               	/* stack size = 0 */
+ 1128               	.L__stack_usage = 0
+ 231:tmk_core/protocol/midi/midi.c ****    device->input_aftertouch_callback = func;
+ 1129               		.loc 1 231 0
+ 1130 0000 FC01      		movw r30,r24
+ 1131 0002 7187      		std Z+9,r23
+ 1132 0004 6087      		std Z+8,r22
+ 1133 0006 0895      		ret
+ 1134               		.cfi_endproc
+ 1135               	.LFE27:
+ 1137               		.section	.text.midi_register_pitchbend_callback,"ax",@progbits
+ 1138               	.global	midi_register_pitchbend_callback
+ 1140               	midi_register_pitchbend_callback:
+ 1141               	.LFB28:
+ 232:tmk_core/protocol/midi/midi.c **** }
+ 233:tmk_core/protocol/midi/midi.c **** 
+ 234:tmk_core/protocol/midi/midi.c **** void midi_register_pitchbend_callback(MidiDevice * device, midi_three_byte_func_t func){
+ 1142               		.loc 1 234 0
+ 1143               		.cfi_startproc
+ 1144               	.LVL96:
+ 1145               	/* prologue: function */
+ 1146               	/* frame size = 0 */
+ 1147               	/* stack size = 0 */
+ 1148               	.L__stack_usage = 0
+ 235:tmk_core/protocol/midi/midi.c ****    device->input_pitchbend_callback = func;
+ 1149               		.loc 1 235 0
+ 1150 0000 FC01      		movw r30,r24
+ 1151 0002 7387      		std Z+11,r23
+ 1152 0004 6287      		std Z+10,r22
+ 1153 0006 0895      		ret
+ 1154               		.cfi_endproc
+ 1155               	.LFE28:
+ 1157               		.section	.text.midi_register_songposition_callback,"ax",@progbits
+ 1158               	.global	midi_register_songposition_callback
+ 1160               	midi_register_songposition_callback:
+ 1161               	.LFB29:
+ 236:tmk_core/protocol/midi/midi.c **** }
+ 237:tmk_core/protocol/midi/midi.c **** 
+ 238:tmk_core/protocol/midi/midi.c **** void midi_register_songposition_callback(MidiDevice * device, midi_three_byte_func_t func){
+ 1162               		.loc 1 238 0
+ 1163               		.cfi_startproc
+ 1164               	.LVL97:
+ 1165               	/* prologue: function */
+ 1166               	/* frame size = 0 */
+ 1167               	/* stack size = 0 */
+ 1168               	.L__stack_usage = 0
+ 239:tmk_core/protocol/midi/midi.c ****    device->input_songposition_callback = func;
+ 1169               		.loc 1 239 0
+ 1170 0000 FC01      		movw r30,r24
+ 1171 0002 7587      		std Z+13,r23
+ 1172 0004 6487      		std Z+12,r22
+ 1173 0006 0895      		ret
+ 1174               		.cfi_endproc
+ 1175               	.LFE29:
+ 1177               		.section	.text.midi_register_progchange_callback,"ax",@progbits
+ 1178               	.global	midi_register_progchange_callback
+ 1180               	midi_register_progchange_callback:
+ 1181               	.LFB30:
+ 240:tmk_core/protocol/midi/midi.c **** }
+ 241:tmk_core/protocol/midi/midi.c **** 
+ 242:tmk_core/protocol/midi/midi.c **** void midi_register_progchange_callback(MidiDevice * device, midi_two_byte_func_t func) {
+ 1182               		.loc 1 242 0
+ 1183               		.cfi_startproc
+ 1184               	.LVL98:
+ 1185               	/* prologue: function */
+ 1186               	/* frame size = 0 */
+ 1187               	/* stack size = 0 */
+ 1188               	.L__stack_usage = 0
+ 243:tmk_core/protocol/midi/midi.c ****    device->input_progchange_callback = func;
+ 1189               		.loc 1 243 0
+ 1190 0000 FC01      		movw r30,r24
+ 1191 0002 7787      		std Z+15,r23
+ 1192 0004 6687      		std Z+14,r22
+ 1193 0006 0895      		ret
+ 1194               		.cfi_endproc
+ 1195               	.LFE30:
+ 1197               		.section	.text.midi_register_chanpressure_callback,"ax",@progbits
+ 1198               	.global	midi_register_chanpressure_callback
+ 1200               	midi_register_chanpressure_callback:
+ 1201               	.LFB31:
+ 244:tmk_core/protocol/midi/midi.c **** }
+ 245:tmk_core/protocol/midi/midi.c **** 
+ 246:tmk_core/protocol/midi/midi.c **** void midi_register_chanpressure_callback(MidiDevice * device, midi_two_byte_func_t func) {
+ 1202               		.loc 1 246 0
+ 1203               		.cfi_startproc
+ 1204               	.LVL99:
+ 1205               	/* prologue: function */
+ 1206               	/* frame size = 0 */
+ 1207               	/* stack size = 0 */
+ 1208               	.L__stack_usage = 0
+ 247:tmk_core/protocol/midi/midi.c ****    device->input_chanpressure_callback = func;
+ 1209               		.loc 1 247 0
+ 1210 0000 FC01      		movw r30,r24
+ 1211 0002 718B      		std Z+17,r23
+ 1212 0004 608B      		std Z+16,r22
+ 1213 0006 0895      		ret
+ 1214               		.cfi_endproc
+ 1215               	.LFE31:
+ 1217               		.section	.text.midi_register_songselect_callback,"ax",@progbits
+ 1218               	.global	midi_register_songselect_callback
+ 1220               	midi_register_songselect_callback:
+ 1221               	.LFB32:
+ 248:tmk_core/protocol/midi/midi.c **** }
+ 249:tmk_core/protocol/midi/midi.c **** 
+ 250:tmk_core/protocol/midi/midi.c **** void midi_register_songselect_callback(MidiDevice * device, midi_two_byte_func_t func) {
+ 1222               		.loc 1 250 0
+ 1223               		.cfi_startproc
+ 1224               	.LVL100:
+ 1225               	/* prologue: function */
+ 1226               	/* frame size = 0 */
+ 1227               	/* stack size = 0 */
+ 1228               	.L__stack_usage = 0
+ 251:tmk_core/protocol/midi/midi.c ****    device->input_songselect_callback = func;
+ 1229               		.loc 1 251 0
+ 1230 0000 FC01      		movw r30,r24
+ 1231 0002 738B      		std Z+19,r23
+ 1232 0004 628B      		std Z+18,r22
+ 1233 0006 0895      		ret
+ 1234               		.cfi_endproc
+ 1235               	.LFE32:
+ 1237               		.section	.text.midi_register_tc_quarterframe_callback,"ax",@progbits
+ 1238               	.global	midi_register_tc_quarterframe_callback
+ 1240               	midi_register_tc_quarterframe_callback:
+ 1241               	.LFB33:
+ 252:tmk_core/protocol/midi/midi.c **** }
+ 253:tmk_core/protocol/midi/midi.c **** 
+ 254:tmk_core/protocol/midi/midi.c **** void midi_register_tc_quarterframe_callback(MidiDevice * device, midi_two_byte_func_t func) {
+ 1242               		.loc 1 254 0
+ 1243               		.cfi_startproc
+ 1244               	.LVL101:
+ 1245               	/* prologue: function */
+ 1246               	/* frame size = 0 */
+ 1247               	/* stack size = 0 */
+ 1248               	.L__stack_usage = 0
+ 255:tmk_core/protocol/midi/midi.c ****    device->input_tc_quarterframe_callback = func;
+ 1249               		.loc 1 255 0
+ 1250 0000 FC01      		movw r30,r24
+ 1251 0002 758B      		std Z+21,r23
+ 1252 0004 648B      		std Z+20,r22
+ 1253 0006 0895      		ret
+ 1254               		.cfi_endproc
+ 1255               	.LFE33:
+ 1257               		.section	.text.midi_register_realtime_callback,"ax",@progbits
+ 1258               	.global	midi_register_realtime_callback
+ 1260               	midi_register_realtime_callback:
+ 1261               	.LFB34:
+ 256:tmk_core/protocol/midi/midi.c **** }
+ 257:tmk_core/protocol/midi/midi.c **** 
+ 258:tmk_core/protocol/midi/midi.c **** void midi_register_realtime_callback(MidiDevice * device, midi_one_byte_func_t func){
+ 1262               		.loc 1 258 0
+ 1263               		.cfi_startproc
+ 1264               	.LVL102:
+ 1265               	/* prologue: function */
+ 1266               	/* frame size = 0 */
+ 1267               	/* stack size = 0 */
+ 1268               	.L__stack_usage = 0
+ 259:tmk_core/protocol/midi/midi.c ****    device->input_realtime_callback = func;
+ 1269               		.loc 1 259 0
+ 1270 0000 FC01      		movw r30,r24
+ 1271 0002 778B      		std Z+23,r23
+ 1272 0004 668B      		std Z+22,r22
+ 1273 0006 0895      		ret
+ 1274               		.cfi_endproc
+ 1275               	.LFE34:
+ 1277               		.section	.text.midi_register_tunerequest_callback,"ax",@progbits
+ 1278               	.global	midi_register_tunerequest_callback
+ 1280               	midi_register_tunerequest_callback:
+ 1281               	.LFB35:
+ 260:tmk_core/protocol/midi/midi.c **** }
+ 261:tmk_core/protocol/midi/midi.c **** 
+ 262:tmk_core/protocol/midi/midi.c **** void midi_register_tunerequest_callback(MidiDevice * device, midi_one_byte_func_t func){
+ 1282               		.loc 1 262 0
+ 1283               		.cfi_startproc
+ 1284               	.LVL103:
+ 1285               	/* prologue: function */
+ 1286               	/* frame size = 0 */
+ 1287               	/* stack size = 0 */
+ 1288               	.L__stack_usage = 0
+ 263:tmk_core/protocol/midi/midi.c ****    device->input_tunerequest_callback = func;
+ 1289               		.loc 1 263 0
+ 1290 0000 FC01      		movw r30,r24
+ 1291 0002 718F      		std Z+25,r23
+ 1292 0004 608F      		std Z+24,r22
+ 1293 0006 0895      		ret
+ 1294               		.cfi_endproc
+ 1295               	.LFE35:
+ 1297               		.section	.text.midi_register_sysex_callback,"ax",@progbits
+ 1298               	.global	midi_register_sysex_callback
+ 1300               	midi_register_sysex_callback:
+ 1301               	.LFB36:
+ 264:tmk_core/protocol/midi/midi.c **** }
+ 265:tmk_core/protocol/midi/midi.c **** 
+ 266:tmk_core/protocol/midi/midi.c **** void midi_register_sysex_callback(MidiDevice * device, midi_sysex_func_t func) {
+ 1302               		.loc 1 266 0
+ 1303               		.cfi_startproc
+ 1304               	.LVL104:
+ 1305               	/* prologue: function */
+ 1306               	/* frame size = 0 */
+ 1307               	/* stack size = 0 */
+ 1308               	.L__stack_usage = 0
+ 267:tmk_core/protocol/midi/midi.c ****    device->input_sysex_callback = func;
+ 1309               		.loc 1 267 0
+ 1310 0000 FC01      		movw r30,r24
+ 1311 0002 738F      		std Z+27,r23
+ 1312 0004 628F      		std Z+26,r22
+ 1313 0006 0895      		ret
+ 1314               		.cfi_endproc
+ 1315               	.LFE36:
+ 1317               		.section	.text.midi_register_fallthrough_callback,"ax",@progbits
+ 1318               	.global	midi_register_fallthrough_callback
+ 1320               	midi_register_fallthrough_callback:
+ 1321               	.LFB37:
+ 268:tmk_core/protocol/midi/midi.c **** }
+ 269:tmk_core/protocol/midi/midi.c **** 
+ 270:tmk_core/protocol/midi/midi.c **** void midi_register_fallthrough_callback(MidiDevice * device, midi_var_byte_func_t func){
+ 1322               		.loc 1 270 0
+ 1323               		.cfi_startproc
+ 1324               	.LVL105:
+ 1325               	/* prologue: function */
+ 1326               	/* frame size = 0 */
+ 1327               	/* stack size = 0 */
+ 1328               	.L__stack_usage = 0
+ 271:tmk_core/protocol/midi/midi.c ****    device->input_fallthrough_callback = func;
+ 1329               		.loc 1 271 0
+ 1330 0000 FC01      		movw r30,r24
+ 1331 0002 758F      		std Z+29,r23
+ 1332 0004 648F      		std Z+28,r22
+ 1333 0006 0895      		ret
+ 1334               		.cfi_endproc
+ 1335               	.LFE37:
+ 1337               		.section	.text.midi_register_catchall_callback,"ax",@progbits
+ 1338               	.global	midi_register_catchall_callback
+ 1340               	midi_register_catchall_callback:
+ 1341               	.LFB38:
+ 272:tmk_core/protocol/midi/midi.c **** }
+ 273:tmk_core/protocol/midi/midi.c **** 
+ 274:tmk_core/protocol/midi/midi.c **** void midi_register_catchall_callback(MidiDevice * device, midi_var_byte_func_t func){
+ 1342               		.loc 1 274 0
+ 1343               		.cfi_startproc
+ 1344               	.LVL106:
+ 1345               	/* prologue: function */
+ 1346               	/* frame size = 0 */
+ 1347               	/* stack size = 0 */
+ 1348               	.L__stack_usage = 0
+ 275:tmk_core/protocol/midi/midi.c ****    device->input_catchall_callback = func;
+ 1349               		.loc 1 275 0
+ 1350 0000 FC01      		movw r30,r24
+ 1351 0002 778F      		std Z+31,r23
+ 1352 0004 668F      		std Z+30,r22
+ 1353 0006 0895      		ret
+ 1354               		.cfi_endproc
+ 1355               	.LFE38:
+ 1357               		.section	.rodata.CSWTCH.11,"a",@progbits
+ 1360               	CSWTCH.11:
+ 1361 0000 02        		.byte	2
+ 1362 0001 03        		.byte	3
+ 1363 0002 02        		.byte	2
+ 1364 0003 00        		.byte	0
+ 1365 0004 00        		.byte	0
+ 1366 0005 01        		.byte	1
+ 1367 0006 00        		.byte	0
+ 1368 0007 01        		.byte	1
+ 1369 0008 01        		.byte	1
+ 1370 0009 01        		.byte	1
+ 1371 000a 01        		.byte	1
+ 1372 000b 01        		.byte	1
+ 1373 000c 00        		.byte	0
+ 1374 000d 01        		.byte	1
+ 1375 000e 01        		.byte	1
+ 1376               		.text
+ 1377               	.Letext0:
+ 1378               		.file 2 "c:\\msys64_2\\home\\egypt2\\qmk_utils\\avr8-gnu-toolchain\\avr\\include\\stdint.h"
+ 1379               		.file 3 "tmk_core/protocol/midi/midi_function_types.h"
+ 1380               		.file 4 "tmk_core/protocol/midi/midi_device.h"
+ 1381               		.file 5 "tmk_core/protocol/midi/bytequeue/bytequeue.h"
+ 1382               		.file 6 "tmk_core/protocol/midi/midi.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 midi.c
+C:\msys64_2\tmp\cc7aYJj0.s:2      *ABS*:0000003e __SP_H__
+C:\msys64_2\tmp\cc7aYJj0.s:3      *ABS*:0000003d __SP_L__
+C:\msys64_2\tmp\cc7aYJj0.s:4      *ABS*:0000003f __SREG__
+C:\msys64_2\tmp\cc7aYJj0.s:5      *ABS*:00000000 __tmp_reg__
+C:\msys64_2\tmp\cc7aYJj0.s:6      *ABS*:00000001 __zero_reg__
+C:\msys64_2\tmp\cc7aYJj0.s:13     .text.midi_is_statusbyte:00000000 midi_is_statusbyte
+C:\msys64_2\tmp\cc7aYJj0.s:35     .text.midi_is_realtime:00000000 midi_is_realtime
+C:\msys64_2\tmp\cc7aYJj0.s:60     .text.midi_packet_length:00000000 midi_packet_length
+C:\msys64_2\tmp\cc7aYJj0.s:1360   .rodata.CSWTCH.11:00000000 CSWTCH.11
+C:\msys64_2\tmp\cc7aYJj0.s:129    .text.midi_send_cc:00000000 midi_send_cc
+C:\msys64_2\tmp\cc7aYJj0.s:170    .text.midi_send_noteon:00000000 midi_send_noteon
+C:\msys64_2\tmp\cc7aYJj0.s:211    .text.midi_send_noteoff:00000000 midi_send_noteoff
+C:\msys64_2\tmp\cc7aYJj0.s:252    .text.midi_send_aftertouch:00000000 midi_send_aftertouch
+C:\msys64_2\tmp\cc7aYJj0.s:293    .text.midi_send_pitchbend:00000000 midi_send_pitchbend
+C:\msys64_2\tmp\cc7aYJj0.s:369    .text.midi_send_programchange:00000000 midi_send_programchange
+C:\msys64_2\tmp\cc7aYJj0.s:408    .text.midi_send_channelpressure:00000000 midi_send_channelpressure
+C:\msys64_2\tmp\cc7aYJj0.s:447    .text.midi_send_clock:00000000 midi_send_clock
+C:\msys64_2\tmp\cc7aYJj0.s:481    .text.midi_send_tick:00000000 midi_send_tick
+C:\msys64_2\tmp\cc7aYJj0.s:515    .text.midi_send_start:00000000 midi_send_start
+C:\msys64_2\tmp\cc7aYJj0.s:549    .text.midi_send_continue:00000000 midi_send_continue
+C:\msys64_2\tmp\cc7aYJj0.s:583    .text.midi_send_stop:00000000 midi_send_stop
+C:\msys64_2\tmp\cc7aYJj0.s:617    .text.midi_send_activesense:00000000 midi_send_activesense
+C:\msys64_2\tmp\cc7aYJj0.s:651    .text.midi_send_reset:00000000 midi_send_reset
+C:\msys64_2\tmp\cc7aYJj0.s:685    .text.midi_send_tcquarterframe:00000000 midi_send_tcquarterframe
+C:\msys64_2\tmp\cc7aYJj0.s:721    .text.midi_send_songposition:00000000 midi_send_songposition
+C:\msys64_2\tmp\cc7aYJj0.s:768    .text.midi_send_songselect:00000000 midi_send_songselect
+C:\msys64_2\tmp\cc7aYJj0.s:804    .text.midi_send_tunerequest:00000000 midi_send_tunerequest
+C:\msys64_2\tmp\cc7aYJj0.s:838    .text.midi_send_byte:00000000 midi_send_byte
+C:\msys64_2\tmp\cc7aYJj0.s:873    .text.midi_send_data:00000000 midi_send_data
+C:\msys64_2\tmp\cc7aYJj0.s:903    .text.midi_send_array:00000000 midi_send_array
+C:\msys64_2\tmp\cc7aYJj0.s:1060   .text.midi_register_cc_callback:00000000 midi_register_cc_callback
+C:\msys64_2\tmp\cc7aYJj0.s:1080   .text.midi_register_noteon_callback:00000000 midi_register_noteon_callback
+C:\msys64_2\tmp\cc7aYJj0.s:1100   .text.midi_register_noteoff_callback:00000000 midi_register_noteoff_callback
+C:\msys64_2\tmp\cc7aYJj0.s:1120   .text.midi_register_aftertouch_callback:00000000 midi_register_aftertouch_callback
+C:\msys64_2\tmp\cc7aYJj0.s:1140   .text.midi_register_pitchbend_callback:00000000 midi_register_pitchbend_callback
+C:\msys64_2\tmp\cc7aYJj0.s:1160   .text.midi_register_songposition_callback:00000000 midi_register_songposition_callback
+C:\msys64_2\tmp\cc7aYJj0.s:1180   .text.midi_register_progchange_callback:00000000 midi_register_progchange_callback
+C:\msys64_2\tmp\cc7aYJj0.s:1200   .text.midi_register_chanpressure_callback:00000000 midi_register_chanpressure_callback
+C:\msys64_2\tmp\cc7aYJj0.s:1220   .text.midi_register_songselect_callback:00000000 midi_register_songselect_callback
+C:\msys64_2\tmp\cc7aYJj0.s:1240   .text.midi_register_tc_quarterframe_callback:00000000 midi_register_tc_quarterframe_callback
+C:\msys64_2\tmp\cc7aYJj0.s:1260   .text.midi_register_realtime_callback:00000000 midi_register_realtime_callback
+C:\msys64_2\tmp\cc7aYJj0.s:1280   .text.midi_register_tunerequest_callback:00000000 midi_register_tunerequest_callback
+C:\msys64_2\tmp\cc7aYJj0.s:1300   .text.midi_register_sysex_callback:00000000 midi_register_sysex_callback
+C:\msys64_2\tmp\cc7aYJj0.s:1320   .text.midi_register_fallthrough_callback:00000000 midi_register_fallthrough_callback
+C:\msys64_2\tmp\cc7aYJj0.s:1340   .text.midi_register_catchall_callback:00000000 midi_register_catchall_callback
+
+UNDEFINED SYMBOLS
+memcpy
+__do_copy_data

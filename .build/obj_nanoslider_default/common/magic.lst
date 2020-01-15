@@ -1,0 +1,117 @@
+   1               		.file	"magic.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.magic,"ax",@progbits
+  11               	.global	magic
+  13               	magic:
+  14               	.LFB103:
+  15               		.file 1 "tmk_core/common/magic.c"
+   1:tmk_core/common/magic.c **** #include <stdint.h>
+   2:tmk_core/common/magic.c **** #include <stdbool.h>
+   3:tmk_core/common/magic.c **** #if defined(__AVR__)
+   4:tmk_core/common/magic.c **** #include <util/delay.h>
+   5:tmk_core/common/magic.c **** #endif
+   6:tmk_core/common/magic.c **** #include "matrix.h"
+   7:tmk_core/common/magic.c **** #include "bootloader.h"
+   8:tmk_core/common/magic.c **** #include "debug.h"
+   9:tmk_core/common/magic.c **** #include "keymap.h"
+  10:tmk_core/common/magic.c **** #include "host.h"
+  11:tmk_core/common/magic.c **** #include "action_layer.h"
+  12:tmk_core/common/magic.c **** #include "eeconfig.h"
+  13:tmk_core/common/magic.c **** #include "magic.h"
+  14:tmk_core/common/magic.c **** 
+  15:tmk_core/common/magic.c **** keymap_config_t keymap_config;
+  16:tmk_core/common/magic.c **** 
+  17:tmk_core/common/magic.c **** /** \brief Magic
+  18:tmk_core/common/magic.c ****  *
+  19:tmk_core/common/magic.c ****  * FIXME: Needs doc
+  20:tmk_core/common/magic.c ****  */
+  21:tmk_core/common/magic.c **** void magic(void)
+  22:tmk_core/common/magic.c **** {
+  16               		.loc 1 22 0
+  17               		.cfi_startproc
+  18               	/* prologue: function */
+  19               	/* frame size = 0 */
+  20               	/* stack size = 0 */
+  21               	.L__stack_usage = 0
+  23:tmk_core/common/magic.c ****     /* check signature */
+  24:tmk_core/common/magic.c ****     if (!eeconfig_is_enabled()) {
+  22               		.loc 1 24 0
+  23 0000 0E94 0000 		call eeconfig_is_enabled
+  24               	.LVL0:
+  25 0004 8111      		cpse r24,__zero_reg__
+  26 0006 00C0      		rjmp .L2
+  25:tmk_core/common/magic.c ****         eeconfig_init();
+  27               		.loc 1 25 0
+  28 0008 0E94 0000 		call eeconfig_init
+  29               	.LVL1:
+  30               	.L2:
+  26:tmk_core/common/magic.c ****     }
+  27:tmk_core/common/magic.c **** 
+  28:tmk_core/common/magic.c ****     /* debug enable */
+  29:tmk_core/common/magic.c ****     debug_config.raw = eeconfig_read_debug();
+  31               		.loc 1 29 0
+  32 000c 0E94 0000 		call eeconfig_read_debug
+  33               	.LVL2:
+  34 0010 8093 0000 		sts debug_config,r24
+  30:tmk_core/common/magic.c **** 
+  31:tmk_core/common/magic.c ****     /* keymap config */
+  32:tmk_core/common/magic.c ****     keymap_config.raw = eeconfig_read_keymap();
+  35               		.loc 1 32 0
+  36 0014 0E94 0000 		call eeconfig_read_keymap
+  37               	.LVL3:
+  38 0018 90E0      		ldi r25,0
+  39 001a 9093 0000 		sts keymap_config+1,r25
+  40 001e 8093 0000 		sts keymap_config,r24
+  41               	.LVL4:
+  33:tmk_core/common/magic.c **** 
+  34:tmk_core/common/magic.c ****     uint8_t default_layer = 0;
+  35:tmk_core/common/magic.c ****     default_layer = eeconfig_read_default_layer();
+  42               		.loc 1 35 0
+  43 0022 0E94 0000 		call eeconfig_read_default_layer
+  44               	.LVL5:
+  36:tmk_core/common/magic.c ****     default_layer_set((layer_state_t)default_layer);
+  45               		.loc 1 36 0
+  46 0026 682F      		mov r22,r24
+  47 0028 70E0      		ldi r23,0
+  48 002a 80E0      		ldi r24,0
+  49 002c 90E0      		ldi r25,0
+  50               	.LVL6:
+  51 002e 0C94 0000 		jmp default_layer_set
+  52               	.LVL7:
+  53               		.cfi_endproc
+  54               	.LFE103:
+  56               		.comm	keymap_config,2,1
+  57               		.text
+  58               	.Letext0:
+  59               		.file 2 "d:\\program files\\msys2\\home\\bnguy\\qmk_utils\\avr8-gnu-toolchain\\avr\\include\\stdin
+  60               		.file 3 "tmk_core/common/debug.h"
+  61               		.file 4 "quantum/keycode_config.h"
+  62               		.file 5 "tmk_core/common/action_layer.h"
+  63               		.file 6 "lib/lufa/LUFA/Drivers/USB/Core/USBTask.h"
+  64               		.file 7 "tmk_core/common/eeconfig.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 magic.c
+D:\Program Files\msys2\tmp\ccEUWVP7.s:2      *ABS*:0000003e __SP_H__
+D:\Program Files\msys2\tmp\ccEUWVP7.s:3      *ABS*:0000003d __SP_L__
+D:\Program Files\msys2\tmp\ccEUWVP7.s:4      *ABS*:0000003f __SREG__
+D:\Program Files\msys2\tmp\ccEUWVP7.s:5      *ABS*:00000000 __tmp_reg__
+D:\Program Files\msys2\tmp\ccEUWVP7.s:6      *ABS*:00000001 __zero_reg__
+D:\Program Files\msys2\tmp\ccEUWVP7.s:13     .text.magic:00000000 magic
+                            *COM*:00000002 keymap_config
+
+UNDEFINED SYMBOLS
+eeconfig_is_enabled
+eeconfig_init
+eeconfig_read_debug
+debug_config
+eeconfig_read_keymap
+eeconfig_read_default_layer
+default_layer_set
+__do_clear_bss

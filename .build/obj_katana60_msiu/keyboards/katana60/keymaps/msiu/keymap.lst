@@ -1,0 +1,554 @@
+   1               		.file	"keymap.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.matrix_init_user,"ax",@progbits
+  11               	.global	matrix_init_user
+  13               	matrix_init_user:
+  14               	.LFB18:
+  15               		.file 1 "keyboards/katana60/keymaps/msiu/keymap.c"
+   1:keyboards/katana60/keymaps/msiu/keymap.c **** #include QMK_KEYBOARD_H
+   2:keyboards/katana60/keymaps/msiu/keymap.c **** 
+   3:keyboards/katana60/keymaps/msiu/keymap.c **** // Mod-Tap keys for cleaner code
+   4:keyboards/katana60/keymaps/msiu/keymap.c **** #define ESC_CTL LCTL_T(KC_ESC)
+   5:keyboards/katana60/keymaps/msiu/keymap.c **** #define SPC_LW LT(2, KC_SPC)
+   6:keyboards/katana60/keymaps/msiu/keymap.c **** #define ENT_FN LT(4, KC_ENT)
+   7:keyboards/katana60/keymaps/msiu/keymap.c **** 
+   8:keyboards/katana60/keymaps/msiu/keymap.c **** #define _QW 0
+   9:keyboards/katana60/keymaps/msiu/keymap.c **** #define _DV 1
+  10:keyboards/katana60/keymaps/msiu/keymap.c **** #define _LW 2
+  11:keyboards/katana60/keymaps/msiu/keymap.c **** #define _RS 3
+  12:keyboards/katana60/keymaps/msiu/keymap.c **** #define _FN 4
+  13:keyboards/katana60/keymaps/msiu/keymap.c **** 
+  14:keyboards/katana60/keymaps/msiu/keymap.c **** const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
+  15:keyboards/katana60/keymaps/msiu/keymap.c **** [_QW] = LAYOUT( /* Base */
+  16:keyboards/katana60/keymaps/msiu/keymap.c ****   KC_ESC,  KC_GRV,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    TG(1),   KC_6,    KC_7,    KC_8,  
+  17:keyboards/katana60/keymaps/msiu/keymap.c ****   KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_LBRC,          KC_RBRC, KC_Y,    KC_U,  
+  18:keyboards/katana60/keymaps/msiu/keymap.c ****   ESC_CTL, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_HOME,          KC_PGUP, KC_H,    KC_J,  
+  19:keyboards/katana60/keymaps/msiu/keymap.c ****   KC_LSFT, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_END,  KC_DEL,  KC_PGDN, KC_N,    KC_M,  
+  20:keyboards/katana60/keymaps/msiu/keymap.c ****   KC_LCTL, KC_HYPR, KC_LALT, KC_LGUI,                   SPC_LW,  ENT_FN,  KC_SPC,           MO(3), 
+  21:keyboards/katana60/keymaps/msiu/keymap.c ****     ),
+  22:keyboards/katana60/keymaps/msiu/keymap.c **** [_DV] = LAYOUT(
+  23:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______
+  24:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, KC_QUOT, KC_COMM, KC_DOT,  KC_P,    KC_Y,    _______,          _______, KC_F,    KC_G,  
+  25:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, KC_A,    KC_O,    KC_E,    KC_U,    KC_I,    _______,          _______, KC_D,    KC_H,  
+  26:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, KC_SCLN, KC_Q,    KC_J,    KC_K,    KC_X,    _______, _______, _______, KC_B,    KC_M,  
+  27:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, _______, _______, _______,                   _______, _______, _______,          _______
+  28:keyboards/katana60/keymaps/msiu/keymap.c ****     ),
+  29:keyboards/katana60/keymaps/msiu/keymap.c **** [_LW] = LAYOUT(
+  30:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, _______, KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   _______, KC_F6,   KC_F7,   KC_F8, 
+  31:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, KC_EXLM, KC_AT,   KC_HASH, KC_DLR,  KC_PERC, _______,          _______, KC_CIRC, KC_AMPR
+  32:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F6,            _______, _______, KC_UNDS
+  33:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,  _______, _______, _______, KC_PGDN
+  34:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, _______, _______, _______,                   _______, _______, _______,          _______
+  35:keyboards/katana60/keymaps/msiu/keymap.c ****     ),
+  36:keyboards/katana60/keymaps/msiu/keymap.c **** [_RS] = LAYOUT(
+  37:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, _______, KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   _______, KC_F6,   KC_F7,   KC_F8, 
+  38:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    _______,          _______, KC_6,    KC_7,  
+  39:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F6,            _______, _______, KC_MINS
+  40:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,  _______, _______, _______, KC_PGDN
+  41:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, _______, _______, _______,                   _______, _______, _______,          _______
+  42:keyboards/katana60/keymaps/msiu/keymap.c ****     ),
+  43:keyboards/katana60/keymaps/msiu/keymap.c **** [_FN] = LAYOUT(
+  44:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, _______, _______, _______, _______, _______, _______, RESET,   _______, _______, _______
+  45:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, _______, _______, _______, _______, _______, _______,          _______, _______, _______
+  46:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, _______, _______, _______, _______, _______, _______,          _______, _______, KC_LEFT
+  47:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______
+  48:keyboards/katana60/keymaps/msiu/keymap.c ****   _______, _______, _______, _______,                   _______, _______, _______,          _______
+  49:keyboards/katana60/keymaps/msiu/keymap.c ****     )
+  50:keyboards/katana60/keymaps/msiu/keymap.c **** };
+  51:keyboards/katana60/keymaps/msiu/keymap.c **** 
+  52:keyboards/katana60/keymaps/msiu/keymap.c **** 
+  53:keyboards/katana60/keymaps/msiu/keymap.c **** 
+  54:keyboards/katana60/keymaps/msiu/keymap.c **** 
+  55:keyboards/katana60/keymaps/msiu/keymap.c **** 
+  56:keyboards/katana60/keymaps/msiu/keymap.c **** void matrix_init_user(void) {
+  16               		.loc 1 56 0
+  17               		.cfi_startproc
+  18               	/* prologue: function */
+  19               	/* frame size = 0 */
+  20               	/* stack size = 0 */
+  21               	.L__stack_usage = 0
+  22               	/* epilogue start */
+  57:keyboards/katana60/keymaps/msiu/keymap.c **** 
+  58:keyboards/katana60/keymaps/msiu/keymap.c **** }
+  23               		.loc 1 58 0
+  24 0000 0895      		ret
+  25               		.cfi_endproc
+  26               	.LFE18:
+  28               		.section	.text.matrix_scan_user,"ax",@progbits
+  29               	.global	matrix_scan_user
+  31               	matrix_scan_user:
+  32               	.LFB23:
+  33               		.cfi_startproc
+  34               	/* prologue: function */
+  35               	/* frame size = 0 */
+  36               	/* stack size = 0 */
+  37               	.L__stack_usage = 0
+  38               	/* epilogue start */
+  39 0000 0895      		ret
+  40               		.cfi_endproc
+  41               	.LFE23:
+  43               		.section	.text.process_record_user,"ax",@progbits
+  44               	.global	process_record_user
+  46               	process_record_user:
+  47               	.LFB20:
+  59:keyboards/katana60/keymaps/msiu/keymap.c **** 
+  60:keyboards/katana60/keymaps/msiu/keymap.c **** void matrix_scan_user(void) {
+  61:keyboards/katana60/keymaps/msiu/keymap.c **** 
+  62:keyboards/katana60/keymaps/msiu/keymap.c **** }
+  63:keyboards/katana60/keymaps/msiu/keymap.c **** 
+  64:keyboards/katana60/keymaps/msiu/keymap.c **** bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+  48               		.loc 1 64 0
+  49               		.cfi_startproc
+  50               	.LVL0:
+  51               	/* prologue: function */
+  52               	/* frame size = 0 */
+  53               	/* stack size = 0 */
+  54               	.L__stack_usage = 0
+  65:keyboards/katana60/keymaps/msiu/keymap.c ****   return true;
+  66:keyboards/katana60/keymaps/msiu/keymap.c **** }
+  55               		.loc 1 66 0
+  56 0000 81E0      		ldi r24,lo8(1)
+  57               	.LVL1:
+  58               	/* epilogue start */
+  59 0002 0895      		ret
+  60               		.cfi_endproc
+  61               	.LFE20:
+  63               		.section	.text.led_set_user,"ax",@progbits
+  64               	.global	led_set_user
+  66               	led_set_user:
+  67               	.LFB21:
+  67:keyboards/katana60/keymaps/msiu/keymap.c **** 
+  68:keyboards/katana60/keymaps/msiu/keymap.c **** void led_set_user(uint8_t usb_led) {
+  68               		.loc 1 68 0
+  69               		.cfi_startproc
+  70               	.LVL2:
+  71               	/* prologue: function */
+  72               	/* frame size = 0 */
+  73               	/* stack size = 0 */
+  74               	.L__stack_usage = 0
+  75               	/* epilogue start */
+  69:keyboards/katana60/keymaps/msiu/keymap.c **** 
+  70:keyboards/katana60/keymaps/msiu/keymap.c **** }
+  76               		.loc 1 70 0
+  77 0000 0895      		ret
+  78               		.cfi_endproc
+  79               	.LFE21:
+  81               	.global	keymaps
+  82               		.section	.progmem.data.keymaps,"a",@progbits
+  85               	keymaps:
+  86 0000 E000      		.word	224
+  87 0002 000F      		.word	3840
+  88 0004 E200      		.word	226
+  89 0006 E300      		.word	227
+  90 0008 2C42      		.word	16940
+  91 000a 2844      		.word	17448
+  92 000c 2C00      		.word	44
+  93 000e 0000      		.word	0
+  94 0010 0000      		.word	0
+  95 0012 0351      		.word	20739
+  96 0014 5000      		.word	80
+  97 0016 5100      		.word	81
+  98 0018 5200      		.word	82
+  99 001a 4F00      		.word	79
+ 100 001c 0000      		.word	0
+ 101 001e E100      		.word	225
+ 102 0020 1D00      		.word	29
+ 103 0022 1B00      		.word	27
+ 104 0024 0600      		.word	6
+ 105 0026 1900      		.word	25
+ 106 0028 0500      		.word	5
+ 107 002a 4D00      		.word	77
+ 108 002c 4C00      		.word	76
+ 109 002e 4E00      		.word	78
+ 110 0030 1100      		.word	17
+ 111 0032 1000      		.word	16
+ 112 0034 3600      		.word	54
+ 113 0036 3700      		.word	55
+ 114 0038 3800      		.word	56
+ 115 003a 2800      		.word	40
+ 116 003c 2961      		.word	24873
+ 117 003e 0400      		.word	4
+ 118 0040 1600      		.word	22
+ 119 0042 0700      		.word	7
+ 120 0044 0900      		.word	9
+ 121 0046 0A00      		.word	10
+ 122 0048 4A00      		.word	74
+ 123 004a 4B00      		.word	75
+ 124 004c 0B00      		.word	11
+ 125 004e 0D00      		.word	13
+ 126 0050 0E00      		.word	14
+ 127 0052 0F00      		.word	15
+ 128 0054 3300      		.word	51
+ 129 0056 3400      		.word	52
+ 130 0058 0000      		.word	0
+ 131 005a 2B00      		.word	43
+ 132 005c 1400      		.word	20
+ 133 005e 1A00      		.word	26
+ 134 0060 0800      		.word	8
+ 135 0062 1500      		.word	21
+ 136 0064 1700      		.word	23
+ 137 0066 2F00      		.word	47
+ 138 0068 3000      		.word	48
+ 139 006a 1C00      		.word	28
+ 140 006c 1800      		.word	24
+ 141 006e 0C00      		.word	12
+ 142 0070 1200      		.word	18
+ 143 0072 1300      		.word	19
+ 144 0074 2A00      		.word	42
+ 145 0076 0000      		.word	0
+ 146 0078 2900      		.word	41
+ 147 007a 3500      		.word	53
+ 148 007c 1E00      		.word	30
+ 149 007e 1F00      		.word	31
+ 150 0080 2000      		.word	32
+ 151 0082 2100      		.word	33
+ 152 0084 2200      		.word	34
+ 153 0086 0153      		.word	21249
+ 154 0088 2300      		.word	35
+ 155 008a 2400      		.word	36
+ 156 008c 2500      		.word	37
+ 157 008e 2600      		.word	38
+ 158 0090 2700      		.word	39
+ 159 0092 2D00      		.word	45
+ 160 0094 2E02      		.word	558
+ 161 0096 0100      		.word	1
+ 162 0098 0100      		.word	1
+ 163 009a 0100      		.word	1
+ 164 009c 0100      		.word	1
+ 165 009e 0100      		.word	1
+ 166 00a0 0100      		.word	1
+ 167 00a2 0100      		.word	1
+ 168 00a4 0000      		.word	0
+ 169 00a6 0000      		.word	0
+ 170 00a8 0100      		.word	1
+ 171 00aa 0100      		.word	1
+ 172 00ac 0100      		.word	1
+ 173 00ae 0100      		.word	1
+ 174 00b0 0100      		.word	1
+ 175 00b2 0000      		.word	0
+ 176 00b4 0100      		.word	1
+ 177 00b6 3300      		.word	51
+ 178 00b8 1400      		.word	20
+ 179 00ba 0D00      		.word	13
+ 180 00bc 0E00      		.word	14
+ 181 00be 1B00      		.word	27
+ 182 00c0 0100      		.word	1
+ 183 00c2 0100      		.word	1
+ 184 00c4 0100      		.word	1
+ 185 00c6 0500      		.word	5
+ 186 00c8 1000      		.word	16
+ 187 00ca 1A00      		.word	26
+ 188 00cc 1900      		.word	25
+ 189 00ce 1D00      		.word	29
+ 190 00d0 0100      		.word	1
+ 191 00d2 0100      		.word	1
+ 192 00d4 0400      		.word	4
+ 193 00d6 1200      		.word	18
+ 194 00d8 0800      		.word	8
+ 195 00da 1800      		.word	24
+ 196 00dc 0C00      		.word	12
+ 197 00de 0100      		.word	1
+ 198 00e0 0100      		.word	1
+ 199 00e2 0700      		.word	7
+ 200 00e4 0B00      		.word	11
+ 201 00e6 1700      		.word	23
+ 202 00e8 1100      		.word	17
+ 203 00ea 1600      		.word	22
+ 204 00ec 3800      		.word	56
+ 205 00ee 0000      		.word	0
+ 206 00f0 0100      		.word	1
+ 207 00f2 3400      		.word	52
+ 208 00f4 3600      		.word	54
+ 209 00f6 3700      		.word	55
+ 210 00f8 1300      		.word	19
+ 211 00fa 1C00      		.word	28
+ 212 00fc 0100      		.word	1
+ 213 00fe 0100      		.word	1
+ 214 0100 0900      		.word	9
+ 215 0102 0A00      		.word	10
+ 216 0104 0600      		.word	6
+ 217 0106 1500      		.word	21
+ 218 0108 0F00      		.word	15
+ 219 010a 0100      		.word	1
+ 220 010c 0000      		.word	0
+ 221 010e 0100      		.word	1
+ 222 0110 0100      		.word	1
+ 223 0112 0100      		.word	1
+ 224 0114 0100      		.word	1
+ 225 0116 0100      		.word	1
+ 226 0118 0100      		.word	1
+ 227 011a 0100      		.word	1
+ 228 011c 0100      		.word	1
+ 229 011e 0100      		.word	1
+ 230 0120 0100      		.word	1
+ 231 0122 0100      		.word	1
+ 232 0124 0100      		.word	1
+ 233 0126 0100      		.word	1
+ 234 0128 0100      		.word	1
+ 235 012a 0100      		.word	1
+ 236 012c 0100      		.word	1
+ 237 012e 0100      		.word	1
+ 238 0130 0100      		.word	1
+ 239 0132 0100      		.word	1
+ 240 0134 0100      		.word	1
+ 241 0136 0100      		.word	1
+ 242 0138 0100      		.word	1
+ 243 013a 0000      		.word	0
+ 244 013c 0000      		.word	0
+ 245 013e 0100      		.word	1
+ 246 0140 0100      		.word	1
+ 247 0142 0100      		.word	1
+ 248 0144 0100      		.word	1
+ 249 0146 0100      		.word	1
+ 250 0148 0000      		.word	0
+ 251 014a 0100      		.word	1
+ 252 014c 4000      		.word	64
+ 253 014e 4100      		.word	65
+ 254 0150 4200      		.word	66
+ 255 0152 4300      		.word	67
+ 256 0154 4400      		.word	68
+ 257 0156 4500      		.word	69
+ 258 0158 0100      		.word	1
+ 259 015a 0100      		.word	1
+ 260 015c 0100      		.word	1
+ 261 015e 4E00      		.word	78
+ 262 0160 4B00      		.word	75
+ 263 0162 4A00      		.word	74
+ 264 0164 4D00      		.word	77
+ 265 0166 A800      		.word	168
+ 266 0168 0100      		.word	1
+ 267 016a 3A00      		.word	58
+ 268 016c 3B00      		.word	59
+ 269 016e 3C00      		.word	60
+ 270 0170 3D00      		.word	61
+ 271 0172 3E00      		.word	62
+ 272 0174 3F00      		.word	63
+ 273 0176 0100      		.word	1
+ 274 0178 0100      		.word	1
+ 275 017a 2D02      		.word	557
+ 276 017c 2E02      		.word	558
+ 277 017e 2F02      		.word	559
+ 278 0180 3002      		.word	560
+ 279 0182 3102      		.word	561
+ 280 0184 0000      		.word	0
+ 281 0186 0100      		.word	1
+ 282 0188 1E02      		.word	542
+ 283 018a 1F02      		.word	543
+ 284 018c 2002      		.word	544
+ 285 018e 2102      		.word	545
+ 286 0190 2202      		.word	546
+ 287 0192 0100      		.word	1
+ 288 0194 0100      		.word	1
+ 289 0196 2302      		.word	547
+ 290 0198 2402      		.word	548
+ 291 019a 2502      		.word	549
+ 292 019c 2602      		.word	550
+ 293 019e 2702      		.word	551
+ 294 01a0 4C00      		.word	76
+ 295 01a2 0000      		.word	0
+ 296 01a4 0100      		.word	1
+ 297 01a6 0100      		.word	1
+ 298 01a8 3A00      		.word	58
+ 299 01aa 3B00      		.word	59
+ 300 01ac 3C00      		.word	60
+ 301 01ae 3D00      		.word	61
+ 302 01b0 3E00      		.word	62
+ 303 01b2 0100      		.word	1
+ 304 01b4 3F00      		.word	63
+ 305 01b6 4000      		.word	64
+ 306 01b8 4100      		.word	65
+ 307 01ba 4200      		.word	66
+ 308 01bc 4300      		.word	67
+ 309 01be 4400      		.word	68
+ 310 01c0 4500      		.word	69
+ 311 01c2 0100      		.word	1
+ 312 01c4 0100      		.word	1
+ 313 01c6 0100      		.word	1
+ 314 01c8 0100      		.word	1
+ 315 01ca 0100      		.word	1
+ 316 01cc 0100      		.word	1
+ 317 01ce 0100      		.word	1
+ 318 01d0 0000      		.word	0
+ 319 01d2 0000      		.word	0
+ 320 01d4 0100      		.word	1
+ 321 01d6 AC00      		.word	172
+ 322 01d8 AA00      		.word	170
+ 323 01da A900      		.word	169
+ 324 01dc AB00      		.word	171
+ 325 01de 0000      		.word	0
+ 326 01e0 0100      		.word	1
+ 327 01e2 4000      		.word	64
+ 328 01e4 4100      		.word	65
+ 329 01e6 4200      		.word	66
+ 330 01e8 4300      		.word	67
+ 331 01ea 4400      		.word	68
+ 332 01ec 4500      		.word	69
+ 333 01ee 0100      		.word	1
+ 334 01f0 0100      		.word	1
+ 335 01f2 0100      		.word	1
+ 336 01f4 4E00      		.word	78
+ 337 01f6 4B00      		.word	75
+ 338 01f8 4A00      		.word	74
+ 339 01fa 4D00      		.word	77
+ 340 01fc A800      		.word	168
+ 341 01fe 0100      		.word	1
+ 342 0200 3A00      		.word	58
+ 343 0202 3B00      		.word	59
+ 344 0204 3C00      		.word	60
+ 345 0206 3D00      		.word	61
+ 346 0208 3E00      		.word	62
+ 347 020a 3F00      		.word	63
+ 348 020c 0100      		.word	1
+ 349 020e 0100      		.word	1
+ 350 0210 2D00      		.word	45
+ 351 0212 2E00      		.word	46
+ 352 0214 2F00      		.word	47
+ 353 0216 3000      		.word	48
+ 354 0218 3100      		.word	49
+ 355 021a 0000      		.word	0
+ 356 021c 0100      		.word	1
+ 357 021e 1E00      		.word	30
+ 358 0220 1F00      		.word	31
+ 359 0222 2000      		.word	32
+ 360 0224 2100      		.word	33
+ 361 0226 2200      		.word	34
+ 362 0228 0100      		.word	1
+ 363 022a 0100      		.word	1
+ 364 022c 2300      		.word	35
+ 365 022e 2400      		.word	36
+ 366 0230 2500      		.word	37
+ 367 0232 2600      		.word	38
+ 368 0234 2700      		.word	39
+ 369 0236 0100      		.word	1
+ 370 0238 0000      		.word	0
+ 371 023a 0100      		.word	1
+ 372 023c 0100      		.word	1
+ 373 023e 3A00      		.word	58
+ 374 0240 3B00      		.word	59
+ 375 0242 3C00      		.word	60
+ 376 0244 3D00      		.word	61
+ 377 0246 3E00      		.word	62
+ 378 0248 0100      		.word	1
+ 379 024a 3F00      		.word	63
+ 380 024c 4000      		.word	64
+ 381 024e 4100      		.word	65
+ 382 0250 4200      		.word	66
+ 383 0252 4300      		.word	67
+ 384 0254 4400      		.word	68
+ 385 0256 4500      		.word	69
+ 386 0258 0100      		.word	1
+ 387 025a 0100      		.word	1
+ 388 025c 0100      		.word	1
+ 389 025e 0100      		.word	1
+ 390 0260 0100      		.word	1
+ 391 0262 0100      		.word	1
+ 392 0264 0100      		.word	1
+ 393 0266 0000      		.word	0
+ 394 0268 0000      		.word	0
+ 395 026a 0100      		.word	1
+ 396 026c 0100      		.word	1
+ 397 026e 0100      		.word	1
+ 398 0270 0100      		.word	1
+ 399 0272 0100      		.word	1
+ 400 0274 0000      		.word	0
+ 401 0276 0100      		.word	1
+ 402 0278 0100      		.word	1
+ 403 027a 0100      		.word	1
+ 404 027c 0100      		.word	1
+ 405 027e 0100      		.word	1
+ 406 0280 0100      		.word	1
+ 407 0282 0100      		.word	1
+ 408 0284 0100      		.word	1
+ 409 0286 0100      		.word	1
+ 410 0288 0100      		.word	1
+ 411 028a 0100      		.word	1
+ 412 028c 0100      		.word	1
+ 413 028e 0100      		.word	1
+ 414 0290 0100      		.word	1
+ 415 0292 0100      		.word	1
+ 416 0294 0100      		.word	1
+ 417 0296 0100      		.word	1
+ 418 0298 0100      		.word	1
+ 419 029a 0100      		.word	1
+ 420 029c 0100      		.word	1
+ 421 029e 0100      		.word	1
+ 422 02a0 0100      		.word	1
+ 423 02a2 0100      		.word	1
+ 424 02a4 0100      		.word	1
+ 425 02a6 5000      		.word	80
+ 426 02a8 5100      		.word	81
+ 427 02aa 4F00      		.word	79
+ 428 02ac 0100      		.word	1
+ 429 02ae 0100      		.word	1
+ 430 02b0 0000      		.word	0
+ 431 02b2 0100      		.word	1
+ 432 02b4 0100      		.word	1
+ 433 02b6 0100      		.word	1
+ 434 02b8 0100      		.word	1
+ 435 02ba 0100      		.word	1
+ 436 02bc 0100      		.word	1
+ 437 02be 0100      		.word	1
+ 438 02c0 0100      		.word	1
+ 439 02c2 0100      		.word	1
+ 440 02c4 0100      		.word	1
+ 441 02c6 5200      		.word	82
+ 442 02c8 0100      		.word	1
+ 443 02ca 4600      		.word	70
+ 444 02cc 0100      		.word	1
+ 445 02ce 0000      		.word	0
+ 446 02d0 0100      		.word	1
+ 447 02d2 0100      		.word	1
+ 448 02d4 0100      		.word	1
+ 449 02d6 0100      		.word	1
+ 450 02d8 0100      		.word	1
+ 451 02da 0100      		.word	1
+ 452 02dc 0100      		.word	1
+ 453 02de 005C      		.word	23552
+ 454 02e0 0100      		.word	1
+ 455 02e2 0100      		.word	1
+ 456 02e4 0100      		.word	1
+ 457 02e6 0100      		.word	1
+ 458 02e8 0100      		.word	1
+ 459 02ea 0100      		.word	1
+ 460 02ec 0100      		.word	1
+ 461               		.text
+ 462               	.Letext0:
+ 463               		.file 2 "/usr/local/Cellar/avr-gcc/7.2.0/avr/include/stdint.h"
+ 464               		.file 3 "/usr/local/Cellar/avr-gcc/7.2.0/lib/avr-gcc/7/gcc/avr/7.2.0/include/stddef.h"
+ 465               		.file 4 "tmk_core/common/keyboard.h"
+ 466               		.file 5 "tmk_core/common/keycode.h"
+ 467               		.file 6 "tmk_core/common/action_code.h"
+ 468               		.file 7 "tmk_core/common/action.h"
+ 469               		.file 8 "tmk_core/common/report.h"
+ 470               		.file 9 "tmk_core/common/host.h"
+ 471               		.file 10 "tmk_core/common/avr/xprintf.h"
+ 472               		.file 11 "tmk_core/common/debug.h"
+ 473               		.file 12 "quantum/keycode_config.h"
+ 474               		.file 13 "quantum/quantum_keycodes.h"
+ 475               		.file 14 "quantum/keymap.h"
+ 476               		.file 15 "tmk_core/common/action_layer.h"
+ 477               		.file 16 "tmk_core/common/timer.h"
+ 478               		.file 17 "tmk_core/common/action_util.h"
+ 479               		.file 18 "/usr/local/Cellar/avr-gcc/7.2.0/avr/include/stdlib.h"
+ 480               		.file 19 "quantum/quantum.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 keymap.c
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc42Feji.s:2      *ABS*:000000000000003e __SP_H__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc42Feji.s:3      *ABS*:000000000000003d __SP_L__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc42Feji.s:4      *ABS*:000000000000003f __SREG__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc42Feji.s:5      *ABS*:0000000000000000 __tmp_reg__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc42Feji.s:6      *ABS*:0000000000000001 __zero_reg__
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc42Feji.s:13     .text.matrix_init_user:0000000000000000 matrix_init_user
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc42Feji.s:31     .text.matrix_scan_user:0000000000000000 matrix_scan_user
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc42Feji.s:46     .text.process_record_user:0000000000000000 process_record_user
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc42Feji.s:66     .text.led_set_user:0000000000000000 led_set_user
+/var/folders/3r/yll9b16919931vhbnddhf4vc0000gp/T//cc42Feji.s:85     .progmem.data.keymaps:0000000000000000 keymaps
+
+NO UNDEFINED SYMBOLS

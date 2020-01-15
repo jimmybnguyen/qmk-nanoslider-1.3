@@ -1,0 +1,747 @@
+   1               		.file	"sysex_tools.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.sysex_encoded_length,"ax",@progbits
+  11               	.global	sysex_encoded_length
+  13               	sysex_encoded_length:
+  14               	.LFB0:
+  15               		.file 1 "tmk_core/protocol/midi/sysex_tools.c"
+   1:tmk_core/protocol/midi/sysex_tools.c **** //midi for embedded chips,
+   2:tmk_core/protocol/midi/sysex_tools.c **** //Copyright 2010 Alex Norman
+   3:tmk_core/protocol/midi/sysex_tools.c **** //
+   4:tmk_core/protocol/midi/sysex_tools.c **** //This file is part of avr-midi.
+   5:tmk_core/protocol/midi/sysex_tools.c **** //
+   6:tmk_core/protocol/midi/sysex_tools.c **** //avr-midi is free software: you can redistribute it and/or modify
+   7:tmk_core/protocol/midi/sysex_tools.c **** //it under the terms of the GNU General Public License as published by
+   8:tmk_core/protocol/midi/sysex_tools.c **** //the Free Software Foundation, either version 3 of the License, or
+   9:tmk_core/protocol/midi/sysex_tools.c **** //(at your option) any later version.
+  10:tmk_core/protocol/midi/sysex_tools.c **** //
+  11:tmk_core/protocol/midi/sysex_tools.c **** //avr-midi is distributed in the hope that it will be useful,
+  12:tmk_core/protocol/midi/sysex_tools.c **** //but WITHOUT ANY WARRANTY; without even the implied warranty of
+  13:tmk_core/protocol/midi/sysex_tools.c **** //MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  14:tmk_core/protocol/midi/sysex_tools.c **** //GNU General Public License for more details.
+  15:tmk_core/protocol/midi/sysex_tools.c **** //
+  16:tmk_core/protocol/midi/sysex_tools.c **** //You should have received a copy of the GNU General Public License
+  17:tmk_core/protocol/midi/sysex_tools.c **** //along with avr-midi.  If not, see <http://www.gnu.org/licenses/>.
+  18:tmk_core/protocol/midi/sysex_tools.c **** 
+  19:tmk_core/protocol/midi/sysex_tools.c **** #include "sysex_tools.h"
+  20:tmk_core/protocol/midi/sysex_tools.c **** 
+  21:tmk_core/protocol/midi/sysex_tools.c **** uint16_t sysex_encoded_length(uint16_t decoded_length){
+  16               		.loc 1 21 0
+  17               		.cfi_startproc
+  18               	.LVL0:
+  19               	/* prologue: function */
+  20               	/* frame size = 0 */
+  21               	/* stack size = 0 */
+  22               	.L__stack_usage = 0
+  22:tmk_core/protocol/midi/sysex_tools.c ****    uint8_t remainder = decoded_length % 7;
+  23               		.loc 1 22 0
+  24 0000 67E0      		ldi r22,lo8(7)
+  25 0002 70E0      		ldi r23,0
+  26 0004 0E94 0000 		call __udivmodhi4
+  27               	.LVL1:
+  28 0008 23E0      		ldi r18,3
+  29               		1:
+  30 000a 660F      		lsl r22
+  31 000c 771F      		rol r23
+  32 000e 2A95      		dec r18
+  33 0010 01F4      		brne 1b
+  23:tmk_core/protocol/midi/sysex_tools.c ****    if (remainder)
+  34               		.loc 1 23 0
+  35 0012 8823      		tst r24
+  36 0014 01F0      		breq .L2
+  24:tmk_core/protocol/midi/sysex_tools.c ****       return (decoded_length / 7) * 8 + remainder + 1;
+  37               		.loc 1 24 0
+  38 0016 0196      		adiw r24,1
+  39               	.LVL2:
+  40 0018 860F      		add r24,r22
+  41 001a 971F      		adc r25,r23
+  42               	.LVL3:
+  43 001c 0895      		ret
+  44               	.LVL4:
+  45               	.L2:
+  25:tmk_core/protocol/midi/sysex_tools.c ****    else
+  26:tmk_core/protocol/midi/sysex_tools.c ****       return (decoded_length / 7) * 8;
+  46               		.loc 1 26 0
+  47 001e CB01      		movw r24,r22
+  48               	.LVL5:
+  27:tmk_core/protocol/midi/sysex_tools.c **** }
+  49               		.loc 1 27 0
+  50 0020 0895      		ret
+  51               		.cfi_endproc
+  52               	.LFE0:
+  54               		.section	.text.sysex_decoded_length,"ax",@progbits
+  55               	.global	sysex_decoded_length
+  57               	sysex_decoded_length:
+  58               	.LFB1:
+  28:tmk_core/protocol/midi/sysex_tools.c **** 
+  29:tmk_core/protocol/midi/sysex_tools.c **** uint16_t sysex_decoded_length(uint16_t encoded_length){
+  59               		.loc 1 29 0
+  60               		.cfi_startproc
+  61               	.LVL6:
+  62               	/* prologue: function */
+  63               	/* frame size = 0 */
+  64               	/* stack size = 0 */
+  65               	.L__stack_usage = 0
+  30:tmk_core/protocol/midi/sysex_tools.c ****    uint8_t remainder = encoded_length % 8;
+  66               		.loc 1 30 0
+  67 0000 482F      		mov r20,r24
+  68 0002 4770      		andi r20,lo8(7)
+  69               	.LVL7:
+  70 0004 9C01      		movw r18,r24
+  71 0006 83E0      		ldi r24,3
+  72               		1:
+  73 0008 3695      		lsr r19
+  74 000a 2795      		ror r18
+  75 000c 8A95      		dec r24
+  76 000e 01F4      		brne 1b
+  77               	.LVL8:
+  31:tmk_core/protocol/midi/sysex_tools.c ****    if (remainder)
+  78               		.loc 1 31 0
+  79 0010 4423      		tst r20
+  80 0012 01F0      		breq .L6
+  32:tmk_core/protocol/midi/sysex_tools.c ****       return (encoded_length / 8) * 7 + remainder - 1;
+  81               		.loc 1 32 0
+  82 0014 57E0      		ldi r21,lo8(7)
+  83 0016 529F      		mul r21,r18
+  84 0018 C001      		movw r24,r0
+  85 001a 539F      		mul r21,r19
+  86 001c 900D      		add r25,r0
+  87 001e 1124      		clr __zero_reg__
+  88 0020 0197      		sbiw r24,1
+  89 0022 840F      		add r24,r20
+  90 0024 911D      		adc r25,__zero_reg__
+  91 0026 0895      		ret
+  92               	.L6:
+  33:tmk_core/protocol/midi/sysex_tools.c ****    else
+  34:tmk_core/protocol/midi/sysex_tools.c ****       return (encoded_length / 8) * 7;
+  93               		.loc 1 34 0
+  94 0028 47E0      		ldi r20,lo8(7)
+  95               	.LVL9:
+  96 002a 429F      		mul r20,r18
+  97 002c C001      		movw r24,r0
+  98 002e 439F      		mul r20,r19
+  99 0030 900D      		add r25,r0
+ 100 0032 1124      		clr __zero_reg__
+  35:tmk_core/protocol/midi/sysex_tools.c **** }
+ 101               		.loc 1 35 0
+ 102 0034 0895      		ret
+ 103               		.cfi_endproc
+ 104               	.LFE1:
+ 106               		.section	.text.sysex_encode,"ax",@progbits
+ 107               	.global	sysex_encode
+ 109               	sysex_encode:
+ 110               	.LFB2:
+  36:tmk_core/protocol/midi/sysex_tools.c **** 
+  37:tmk_core/protocol/midi/sysex_tools.c **** uint16_t sysex_encode(uint8_t *encoded, const uint8_t *source, const uint16_t length){
+ 111               		.loc 1 37 0
+ 112               		.cfi_startproc
+ 113               	.LVL10:
+ 114 0000 6F92      		push r6
+ 115               	.LCFI0:
+ 116               		.cfi_def_cfa_offset 3
+ 117               		.cfi_offset 6, -2
+ 118 0002 7F92      		push r7
+ 119               	.LCFI1:
+ 120               		.cfi_def_cfa_offset 4
+ 121               		.cfi_offset 7, -3
+ 122 0004 9F92      		push r9
+ 123               	.LCFI2:
+ 124               		.cfi_def_cfa_offset 5
+ 125               		.cfi_offset 9, -4
+ 126 0006 AF92      		push r10
+ 127               	.LCFI3:
+ 128               		.cfi_def_cfa_offset 6
+ 129               		.cfi_offset 10, -5
+ 130 0008 BF92      		push r11
+ 131               	.LCFI4:
+ 132               		.cfi_def_cfa_offset 7
+ 133               		.cfi_offset 11, -6
+ 134 000a CF92      		push r12
+ 135               	.LCFI5:
+ 136               		.cfi_def_cfa_offset 8
+ 137               		.cfi_offset 12, -7
+ 138 000c DF92      		push r13
+ 139               	.LCFI6:
+ 140               		.cfi_def_cfa_offset 9
+ 141               		.cfi_offset 13, -8
+ 142 000e EF92      		push r14
+ 143               	.LCFI7:
+ 144               		.cfi_def_cfa_offset 10
+ 145               		.cfi_offset 14, -9
+ 146 0010 FF92      		push r15
+ 147               	.LCFI8:
+ 148               		.cfi_def_cfa_offset 11
+ 149               		.cfi_offset 15, -10
+ 150 0012 0F93      		push r16
+ 151               	.LCFI9:
+ 152               		.cfi_def_cfa_offset 12
+ 153               		.cfi_offset 16, -11
+ 154 0014 1F93      		push r17
+ 155               	.LCFI10:
+ 156               		.cfi_def_cfa_offset 13
+ 157               		.cfi_offset 17, -12
+ 158 0016 CF93      		push r28
+ 159               	.LCFI11:
+ 160               		.cfi_def_cfa_offset 14
+ 161               		.cfi_offset 28, -13
+ 162 0018 DF93      		push r29
+ 163               	.LCFI12:
+ 164               		.cfi_def_cfa_offset 15
+ 165               		.cfi_offset 29, -14
+ 166               	/* prologue: function */
+ 167               	/* frame size = 0 */
+ 168               	/* stack size = 13 */
+ 169               	.L__stack_usage = 13
+ 170 001a EC01      		movw r28,r24
+ 171 001c 8B01      		movw r16,r22
+ 172 001e 7A01      		movw r14,r20
+  38:tmk_core/protocol/midi/sysex_tools.c ****    uint16_t encoded_full = length / 7; //number of full 8 byte sections from 7 bytes of input
+ 173               		.loc 1 38 0
+ 174 0020 CA01      		movw r24,r20
+ 175               	.LVL11:
+ 176 0022 67E0      		ldi r22,lo8(7)
+ 177 0024 70E0      		ldi r23,0
+ 178               	.LVL12:
+ 179 0026 0E94 0000 		call __udivmodhi4
+ 180 002a 5B01      		movw r10,r22
+ 181               	.LVL13:
+ 182 002c B801      		movw r22,r16
+ 183 002e FE01      		movw r30,r28
+  39:tmk_core/protocol/midi/sysex_tools.c ****    uint16_t i,j;
+  40:tmk_core/protocol/midi/sysex_tools.c **** 
+  41:tmk_core/protocol/midi/sysex_tools.c ****    //fill out the fully encoded sections
+  42:tmk_core/protocol/midi/sysex_tools.c ****    for(i = 0; i < encoded_full; i++) {
+ 184               		.loc 1 42 0
+ 185 0030 20E0      		ldi r18,0
+ 186 0032 30E0      		ldi r19,0
+ 187               	.LVL14:
+ 188               	.L9:
+ 189               		.loc 1 42 0 is_stmt 0 discriminator 1
+ 190 0034 2A15      		cp r18,r10
+ 191 0036 3B05      		cpc r19,r11
+ 192 0038 01F0      		breq .L17
+ 193               	.LVL15:
+ 194               	.LBB2:
+  43:tmk_core/protocol/midi/sysex_tools.c ****       uint16_t encoded_msb_idx = i * 8;
+  44:tmk_core/protocol/midi/sysex_tools.c ****       uint16_t input_start_idx = i * 7;
+  45:tmk_core/protocol/midi/sysex_tools.c ****       encoded[encoded_msb_idx] = 0;
+ 195               		.loc 1 45 0 is_stmt 1
+ 196 003a DF01      		movw r26,r30
+ 197 003c 1D92      		st X+,__zero_reg__
+ 198 003e 3D01      		movw r6,r26
+ 199               	.LVL16:
+ 200 0040 6B01      		movw r12,r22
+  46:tmk_core/protocol/midi/sysex_tools.c ****       for(j = 0; j < 7; j++){
+ 201               		.loc 1 46 0
+ 202 0042 80E0      		ldi r24,0
+ 203 0044 90E0      		ldi r25,0
+ 204               	.LVL17:
+ 205               	.L10:
+ 206               	.LBB3:
+  47:tmk_core/protocol/midi/sysex_tools.c ****          uint8_t current = source[input_start_idx + j];
+ 207               		.loc 1 47 0 discriminator 3
+ 208 0046 D601      		movw r26,r12
+ 209 0048 9D90      		ld r9,X+
+ 210 004a 6D01      		movw r12,r26
+ 211               	.LVL18:
+  48:tmk_core/protocol/midi/sysex_tools.c ****          encoded[encoded_msb_idx] |= (0x80 & current) >> (1 + j);
+ 212               		.loc 1 48 0 discriminator 3
+ 213 004c 0196      		adiw r24,1
+ 214               	.LVL19:
+ 215 004e 492D      		mov r20,r9
+ 216 0050 4078      		andi r20,lo8(-128)
+ 217 0052 50E0      		ldi r21,0
+ 218 0054 082E      		mov r0,r24
+ 219 0056 00C0      		rjmp 2f
+ 220               		1:
+ 221 0058 5595      		asr r21
+ 222 005a 4795      		ror r20
+ 223               		2:
+ 224 005c 0A94      		dec r0
+ 225 005e 02F4      		brpl 1b
+ 226 0060 5081      		ld r21,Z
+ 227 0062 452B      		or r20,r21
+ 228 0064 4083      		st Z,r20
+  49:tmk_core/protocol/midi/sysex_tools.c ****          encoded[encoded_msb_idx + 1 + j] = 0x7F & current;
+ 229               		.loc 1 49 0 discriminator 3
+ 230 0066 492D      		mov r20,r9
+ 231 0068 4F77      		andi r20,lo8(127)
+ 232 006a D301      		movw r26,r6
+ 233 006c 4D93      		st X+,r20
+ 234 006e 3D01      		movw r6,r26
+ 235               	.LVL20:
+ 236               	.LBE3:
+  46:tmk_core/protocol/midi/sysex_tools.c ****          uint8_t current = source[input_start_idx + j];
+ 237               		.loc 1 46 0 discriminator 3
+ 238 0070 8730      		cpi r24,7
+ 239 0072 9105      		cpc r25,__zero_reg__
+ 240 0074 01F4      		brne .L10
+ 241               	.LBE2:
+  42:tmk_core/protocol/midi/sysex_tools.c ****       uint16_t encoded_msb_idx = i * 8;
+ 242               		.loc 1 42 0 discriminator 2
+ 243 0076 2F5F      		subi r18,-1
+ 244 0078 3F4F      		sbci r19,-1
+ 245               	.LVL21:
+ 246 007a 695F      		subi r22,-7
+ 247 007c 7F4F      		sbci r23,-1
+ 248               	.LVL22:
+ 249 007e 3896      		adiw r30,8
+ 250               	.LVL23:
+ 251 0080 00C0      		rjmp .L9
+ 252               	.LVL24:
+ 253               	.L17:
+  50:tmk_core/protocol/midi/sysex_tools.c ****       }
+  51:tmk_core/protocol/midi/sysex_tools.c ****    }
+  52:tmk_core/protocol/midi/sysex_tools.c **** 
+  53:tmk_core/protocol/midi/sysex_tools.c ****    //fill out the rest if there is any more
+  54:tmk_core/protocol/midi/sysex_tools.c ****    uint8_t remainder = length % 7;
+ 254               		.loc 1 54 0
+ 255 0082 C701      		movw r24,r14
+ 256 0084 67E0      		ldi r22,lo8(7)
+ 257 0086 70E0      		ldi r23,0
+ 258 0088 0E94 0000 		call __udivmodhi4
+ 259               	.LVL25:
+ 260 008c A901      		movw r20,r18
+ 261 008e 63E0      		ldi r22,3
+ 262               		1:
+ 263 0090 440F      		lsl r20
+ 264 0092 551F      		rol r21
+ 265 0094 6A95      		dec r22
+ 266 0096 01F4      		brne 1b
+  55:tmk_core/protocol/midi/sysex_tools.c ****    if (remainder) {
+ 267               		.loc 1 55 0
+ 268 0098 8823      		tst r24
+ 269 009a 01F0      		breq .L12
+ 270               	.LVL26:
+ 271               	.LBB4:
+  56:tmk_core/protocol/midi/sysex_tools.c ****       uint16_t encoded_msb_idx = encoded_full * 8;
+  57:tmk_core/protocol/midi/sysex_tools.c ****       uint16_t input_start_idx = encoded_full * 7;
+  58:tmk_core/protocol/midi/sysex_tools.c ****       encoded[encoded_msb_idx] = 0;
+ 272               		.loc 1 58 0
+ 273 009c FE01      		movw r30,r28
+ 274 009e E40F      		add r30,r20
+ 275 00a0 F51F      		adc r31,r21
+ 276 00a2 1082      		st Z,__zero_reg__
+ 277               	.LVL27:
+ 278 00a4 67E0      		ldi r22,lo8(7)
+ 279 00a6 629F      		mul r22,r18
+ 280 00a8 D001      		movw r26,r0
+ 281 00aa 639F      		mul r22,r19
+ 282 00ac B00D      		add r27,r0
+ 283 00ae 1124      		clr __zero_reg__
+ 284 00b0 A00F      		add r26,r16
+ 285 00b2 B11F      		adc r27,r17
+ 286 00b4 9A01      		movw r18,r20
+ 287               	.LVL28:
+ 288 00b6 2F5F      		subi r18,-1
+ 289 00b8 3F4F      		sbci r19,-1
+ 290 00ba C20F      		add r28,r18
+ 291 00bc D31F      		adc r29,r19
+ 292               	.LVL29:
+  59:tmk_core/protocol/midi/sysex_tools.c ****       for(j = 0; j < remainder; j++){
+ 293               		.loc 1 59 0
+ 294 00be 60E0      		ldi r22,0
+ 295 00c0 70E0      		ldi r23,0
+ 296               	.LVL30:
+ 297               	.L13:
+ 298               	.LBB5:
+  60:tmk_core/protocol/midi/sysex_tools.c ****          uint8_t current = source[input_start_idx + j];
+ 299               		.loc 1 60 0 discriminator 3
+ 300 00c2 1D91      		ld r17,X+
+ 301               	.LVL31:
+  61:tmk_core/protocol/midi/sysex_tools.c ****          encoded[encoded_msb_idx] |= (0x80 & current) >> (1 + j);
+ 302               		.loc 1 61 0 discriminator 3
+ 303 00c4 6F5F      		subi r22,-1
+ 304 00c6 7F4F      		sbci r23,-1
+ 305               	.LVL32:
+ 306 00c8 212F      		mov r18,r17
+ 307 00ca 2078      		andi r18,lo8(-128)
+ 308 00cc 30E0      		ldi r19,0
+ 309 00ce 062E      		mov r0,r22
+ 310 00d0 00C0      		rjmp 2f
+ 311               		1:
+ 312 00d2 3595      		asr r19
+ 313 00d4 2795      		ror r18
+ 314               		2:
+ 315 00d6 0A94      		dec r0
+ 316 00d8 02F4      		brpl 1b
+ 317 00da 3081      		ld r19,Z
+ 318 00dc 232B      		or r18,r19
+ 319 00de 2083      		st Z,r18
+  62:tmk_core/protocol/midi/sysex_tools.c ****          encoded[encoded_msb_idx + 1 + j] = 0x7F & current;
+ 320               		.loc 1 62 0 discriminator 3
+ 321 00e0 1F77      		andi r17,lo8(127)
+ 322               	.LVL33:
+ 323 00e2 1993      		st Y+,r17
+ 324               	.LVL34:
+ 325               	.LBE5:
+  59:tmk_core/protocol/midi/sysex_tools.c ****          uint8_t current = source[input_start_idx + j];
+ 326               		.loc 1 59 0 discriminator 3
+ 327 00e4 8617      		cp r24,r22
+ 328 00e6 9707      		cpc r25,r23
+ 329 00e8 01F4      		brne .L13
+  63:tmk_core/protocol/midi/sysex_tools.c ****       }
+  64:tmk_core/protocol/midi/sysex_tools.c ****       return encoded_msb_idx + remainder + 1;
+ 330               		.loc 1 64 0
+ 331 00ea 0196      		adiw r24,1
+ 332               	.LVL35:
+ 333 00ec 840F      		add r24,r20
+ 334 00ee 951F      		adc r25,r21
+ 335               	.LVL36:
+ 336 00f0 00C0      		rjmp .L14
+ 337               	.LVL37:
+ 338               	.L12:
+ 339               	.LBE4:
+  65:tmk_core/protocol/midi/sysex_tools.c ****    } else {
+  66:tmk_core/protocol/midi/sysex_tools.c ****       return encoded_full * 8;
+ 340               		.loc 1 66 0
+ 341 00f2 CA01      		movw r24,r20
+ 342               	.LVL38:
+ 343               	.L14:
+ 344               	/* epilogue start */
+  67:tmk_core/protocol/midi/sysex_tools.c ****    }
+  68:tmk_core/protocol/midi/sysex_tools.c **** }
+ 345               		.loc 1 68 0
+ 346 00f4 DF91      		pop r29
+ 347 00f6 CF91      		pop r28
+ 348 00f8 1F91      		pop r17
+ 349 00fa 0F91      		pop r16
+ 350               	.LVL39:
+ 351 00fc FF90      		pop r15
+ 352 00fe EF90      		pop r14
+ 353               	.LVL40:
+ 354 0100 DF90      		pop r13
+ 355 0102 CF90      		pop r12
+ 356 0104 BF90      		pop r11
+ 357 0106 AF90      		pop r10
+ 358               	.LVL41:
+ 359 0108 9F90      		pop r9
+ 360 010a 7F90      		pop r7
+ 361 010c 6F90      		pop r6
+ 362 010e 0895      		ret
+ 363               		.cfi_endproc
+ 364               	.LFE2:
+ 366               		.section	.text.sysex_decode,"ax",@progbits
+ 367               	.global	sysex_decode
+ 369               	sysex_decode:
+ 370               	.LFB3:
+  69:tmk_core/protocol/midi/sysex_tools.c **** 
+  70:tmk_core/protocol/midi/sysex_tools.c **** uint16_t sysex_decode(uint8_t *decoded, const uint8_t *source, const uint16_t length){
+ 371               		.loc 1 70 0
+ 372               		.cfi_startproc
+ 373               	.LVL42:
+ 374 0000 6F92      		push r6
+ 375               	.LCFI13:
+ 376               		.cfi_def_cfa_offset 3
+ 377               		.cfi_offset 6, -2
+ 378 0002 7F92      		push r7
+ 379               	.LCFI14:
+ 380               		.cfi_def_cfa_offset 4
+ 381               		.cfi_offset 7, -3
+ 382 0004 9F92      		push r9
+ 383               	.LCFI15:
+ 384               		.cfi_def_cfa_offset 5
+ 385               		.cfi_offset 9, -4
+ 386 0006 AF92      		push r10
+ 387               	.LCFI16:
+ 388               		.cfi_def_cfa_offset 6
+ 389               		.cfi_offset 10, -5
+ 390 0008 BF92      		push r11
+ 391               	.LCFI17:
+ 392               		.cfi_def_cfa_offset 7
+ 393               		.cfi_offset 11, -6
+ 394 000a CF92      		push r12
+ 395               	.LCFI18:
+ 396               		.cfi_def_cfa_offset 8
+ 397               		.cfi_offset 12, -7
+ 398 000c DF92      		push r13
+ 399               	.LCFI19:
+ 400               		.cfi_def_cfa_offset 9
+ 401               		.cfi_offset 13, -8
+ 402 000e EF92      		push r14
+ 403               	.LCFI20:
+ 404               		.cfi_def_cfa_offset 10
+ 405               		.cfi_offset 14, -9
+ 406 0010 FF92      		push r15
+ 407               	.LCFI21:
+ 408               		.cfi_def_cfa_offset 11
+ 409               		.cfi_offset 15, -10
+ 410 0012 0F93      		push r16
+ 411               	.LCFI22:
+ 412               		.cfi_def_cfa_offset 12
+ 413               		.cfi_offset 16, -11
+ 414 0014 1F93      		push r17
+ 415               	.LCFI23:
+ 416               		.cfi_def_cfa_offset 13
+ 417               		.cfi_offset 17, -12
+ 418 0016 CF93      		push r28
+ 419               	.LCFI24:
+ 420               		.cfi_def_cfa_offset 14
+ 421               		.cfi_offset 28, -13
+ 422 0018 DF93      		push r29
+ 423               	.LCFI25:
+ 424               		.cfi_def_cfa_offset 15
+ 425               		.cfi_offset 29, -14
+ 426               	/* prologue: function */
+ 427               	/* frame size = 0 */
+ 428               	/* stack size = 13 */
+ 429               	.L__stack_usage = 13
+  71:tmk_core/protocol/midi/sysex_tools.c ****    uint16_t decoded_full = length / 8;
+ 430               		.loc 1 71 0
+ 431 001a 5A01      		movw r10,r20
+ 432 001c E3E0      		ldi r30,3
+ 433               		1:
+ 434 001e B694      		lsr r11
+ 435 0020 A794      		ror r10
+ 436 0022 EA95      		dec r30
+ 437 0024 01F4      		brne 1b
+ 438               	.LVL43:
+  72:tmk_core/protocol/midi/sysex_tools.c ****    uint16_t i,j;
+  73:tmk_core/protocol/midi/sysex_tools.c **** 
+  74:tmk_core/protocol/midi/sysex_tools.c ****    if (length < 2)
+ 439               		.loc 1 74 0
+ 440 0026 4230      		cpi r20,2
+ 441 0028 5105      		cpc r21,__zero_reg__
+ 442 002a 00F4      		brsh .+2
+ 443 002c 00C0      		rjmp .L26
+ 444 002e DB01      		movw r26,r22
+ 445 0030 8C01      		movw r16,r24
+ 446 0032 E0E0      		ldi r30,0
+ 447 0034 F0E0      		ldi r31,0
+ 448               	.L20:
+ 449               	.LVL44:
+  75:tmk_core/protocol/midi/sysex_tools.c ****       return 0;
+  76:tmk_core/protocol/midi/sysex_tools.c **** 
+  77:tmk_core/protocol/midi/sysex_tools.c ****    //fill out the fully encoded sections
+  78:tmk_core/protocol/midi/sysex_tools.c ****    for(i = 0; i < decoded_full; i++) {
+ 450               		.loc 1 78 0 discriminator 1
+ 451 0036 EA15      		cp r30,r10
+ 452 0038 FB05      		cpc r31,r11
+ 453 003a 01F0      		breq .L28
+ 454               	.LVL45:
+ 455 003c 6D01      		movw r12,r26
+ 456 003e 2FEF      		ldi r18,-1
+ 457 0040 C21A      		sub r12,r18
+ 458 0042 D20A      		sbc r13,r18
+ 459               		.loc 1 78 0 is_stmt 0
+ 460 0044 7801      		movw r14,r16
+ 461               	.LBB6:
+  79:tmk_core/protocol/midi/sysex_tools.c ****       uint16_t encoded_msb_idx = i * 8;
+  80:tmk_core/protocol/midi/sysex_tools.c ****       uint16_t output_start_index = i * 7;
+  81:tmk_core/protocol/midi/sysex_tools.c ****       for(j = 0; j < 7; j++){
+ 462               		.loc 1 81 0 is_stmt 1
+ 463 0046 612C      		mov r6,__zero_reg__
+ 464 0048 712C      		mov r7,__zero_reg__
+ 465               	.LVL46:
+ 466               	.L21:
+  82:tmk_core/protocol/midi/sysex_tools.c ****          decoded[output_start_index + j] = 0x7F & source[encoded_msb_idx + j + 1];
+ 467               		.loc 1 82 0 discriminator 3
+ 468 004a E601      		movw r28,r12
+ 469 004c 2991      		ld r18,Y+
+ 470 004e 6E01      		movw r12,r28
+ 471 0050 2F77      		andi r18,lo8(127)
+ 472 0052 922E      		mov r9,r18
+ 473 0054 E701      		movw r28,r14
+ 474 0056 2883      		st Y,r18
+  83:tmk_core/protocol/midi/sysex_tools.c ****          decoded[output_start_index + j] |= (0x80 & (source[encoded_msb_idx] << (1 + j)));
+ 475               		.loc 1 83 0 discriminator 3
+ 476 0058 DFEF      		ldi r29,-1
+ 477 005a 6D1A      		sub r6,r29
+ 478 005c 7D0A      		sbc r7,r29
+ 479               	.LVL47:
+ 480 005e 2C91      		ld r18,X
+ 481 0060 062C      		mov r0,r6
+ 482 0062 00C0      		rjmp 2f
+ 483               		1:
+ 484 0064 220F      		lsl r18
+ 485               		2:
+ 486 0066 0A94      		dec r0
+ 487 0068 02F4      		brpl 1b
+ 488 006a 2078      		andi r18,lo8(-128)
+ 489 006c 922A      		or r9,r18
+ 490 006e E701      		movw r28,r14
+ 491 0070 9992      		st Y+,r9
+ 492 0072 7E01      		movw r14,r28
+ 493               	.LVL48:
+  81:tmk_core/protocol/midi/sysex_tools.c ****          decoded[output_start_index + j] = 0x7F & source[encoded_msb_idx + j + 1];
+ 494               		.loc 1 81 0 discriminator 3
+ 495 0074 D7E0      		ldi r29,7
+ 496 0076 6D16      		cp r6,r29
+ 497 0078 7104      		cpc r7,__zero_reg__
+ 498 007a 01F4      		brne .L21
+ 499               	.LBE6:
+  78:tmk_core/protocol/midi/sysex_tools.c ****       uint16_t encoded_msb_idx = i * 8;
+ 500               		.loc 1 78 0 discriminator 2
+ 501 007c 3196      		adiw r30,1
+ 502               	.LVL49:
+ 503 007e 1896      		adiw r26,8
+ 504               	.LVL50:
+ 505 0080 095F      		subi r16,-7
+ 506 0082 1F4F      		sbci r17,-1
+ 507               	.LVL51:
+ 508 0084 00C0      		rjmp .L20
+ 509               	.LVL52:
+ 510               	.L28:
+  84:tmk_core/protocol/midi/sysex_tools.c ****       }
+  85:tmk_core/protocol/midi/sysex_tools.c ****    }
+  86:tmk_core/protocol/midi/sysex_tools.c ****    uint8_t remainder = length % 8;
+ 511               		.loc 1 86 0
+ 512 0086 4770      		andi r20,lo8(7)
+ 513               	.LVL53:
+  87:tmk_core/protocol/midi/sysex_tools.c ****    if (remainder) {
+ 514               		.loc 1 87 0
+ 515 0088 01F0      		breq .L23
+ 516               	.LBB7:
+  88:tmk_core/protocol/midi/sysex_tools.c ****       uint16_t encoded_msb_idx = decoded_full * 8;
+ 517               		.loc 1 88 0
+ 518 008a 9F01      		movw r18,r30
+ 519 008c 53E0      		ldi r21,3
+ 520               		1:
+ 521 008e 220F      		lsl r18
+ 522 0090 331F      		rol r19
+ 523 0092 5A95      		dec r21
+ 524 0094 01F4      		brne 1b
+ 525               	.LVL54:
+  89:tmk_core/protocol/midi/sysex_tools.c ****       uint16_t output_start_index = decoded_full * 7;
+ 526               		.loc 1 89 0
+ 527 0096 57E0      		ldi r21,lo8(7)
+ 528 0098 5E9F      		mul r21,r30
+ 529 009a D001      		movw r26,r0
+ 530 009c 5F9F      		mul r21,r31
+ 531 009e B00D      		add r27,r0
+ 532 00a0 1124      		clr __zero_reg__
+ 533               	.LVL55:
+ 534 00a2 8901      		movw r16,r18
+ 535 00a4 0F5F      		subi r16,-1
+ 536 00a6 1F4F      		sbci r17,-1
+ 537 00a8 060F      		add r16,r22
+ 538 00aa 171F      		adc r17,r23
+ 539 00ac 7C01      		movw r14,r24
+ 540 00ae EA0E      		add r14,r26
+ 541 00b0 FB1E      		adc r15,r27
+  90:tmk_core/protocol/midi/sysex_tools.c ****       for(j = 0; j < (remainder - 1); j++) {
+ 542               		.loc 1 90 0
+ 543 00b2 C0E0      		ldi r28,0
+ 544 00b4 D0E0      		ldi r29,0
+ 545 00b6 C42E      		mov r12,r20
+ 546 00b8 D12C      		mov r13,__zero_reg__
+ 547 00ba A601      		movw r20,r12
+ 548               	.LVL56:
+ 549 00bc 4150      		subi r20,1
+ 550 00be 5109      		sbc r21,__zero_reg__
+  91:tmk_core/protocol/midi/sysex_tools.c ****          decoded[output_start_index + j] = 0x7F & source[encoded_msb_idx + j + 1];
+  92:tmk_core/protocol/midi/sysex_tools.c ****          decoded[output_start_index + j] |= (0x80 & (source[encoded_msb_idx] << (1 + j)));
+ 551               		.loc 1 92 0
+ 552 00c0 620F      		add r22,r18
+ 553 00c2 731F      		adc r23,r19
+ 554               	.LVL57:
+ 555               	.L24:
+  90:tmk_core/protocol/midi/sysex_tools.c ****       for(j = 0; j < (remainder - 1); j++) {
+ 556               		.loc 1 90 0 discriminator 1
+ 557 00c4 C417      		cp r28,r20
+ 558 00c6 D507      		cpc r29,r21
+ 559 00c8 00F4      		brsh .L29
+  91:tmk_core/protocol/midi/sysex_tools.c ****          decoded[output_start_index + j] = 0x7F & source[encoded_msb_idx + j + 1];
+ 560               		.loc 1 91 0 discriminator 3
+ 561 00ca F801      		movw r30,r16
+ 562 00cc 8191      		ld r24,Z+
+ 563 00ce 8F01      		movw r16,r30
+ 564 00d0 8F77      		andi r24,lo8(127)
+ 565 00d2 F701      		movw r30,r14
+ 566 00d4 8083      		st Z,r24
+ 567               		.loc 1 92 0 discriminator 3
+ 568 00d6 2196      		adiw r28,1
+ 569               	.LVL58:
+ 570 00d8 FB01      		movw r30,r22
+ 571 00da 9081      		ld r25,Z
+ 572 00dc 292F      		mov r18,r25
+ 573 00de 0C2E      		mov r0,r28
+ 574 00e0 00C0      		rjmp 2f
+ 575               		1:
+ 576 00e2 220F      		lsl r18
+ 577               		2:
+ 578 00e4 0A94      		dec r0
+ 579 00e6 02F4      		brpl 1b
+ 580 00e8 2078      		andi r18,lo8(-128)
+ 581 00ea 282B      		or r18,r24
+ 582 00ec F701      		movw r30,r14
+ 583 00ee 2193      		st Z+,r18
+ 584 00f0 7F01      		movw r14,r30
+ 585               	.LVL59:
+ 586 00f2 00C0      		rjmp .L24
+ 587               	.L29:
+  93:tmk_core/protocol/midi/sysex_tools.c ****       }
+  94:tmk_core/protocol/midi/sysex_tools.c ****       return decoded_full * 7 + remainder - 1;
+ 588               		.loc 1 94 0
+ 589 00f4 CD01      		movw r24,r26
+ 590 00f6 0197      		sbiw r24,1
+ 591 00f8 8C0D      		add r24,r12
+ 592 00fa 9D1D      		adc r25,r13
+ 593 00fc 00C0      		rjmp .L19
+ 594               	.LVL60:
+ 595               	.L23:
+ 596               	.LBE7:
+  95:tmk_core/protocol/midi/sysex_tools.c ****    } else {
+  96:tmk_core/protocol/midi/sysex_tools.c ****       return decoded_full * 7;
+ 597               		.loc 1 96 0
+ 598 00fe 27E0      		ldi r18,lo8(7)
+ 599 0100 2E9F      		mul r18,r30
+ 600 0102 C001      		movw r24,r0
+ 601 0104 2F9F      		mul r18,r31
+ 602 0106 900D      		add r25,r0
+ 603 0108 1124      		clr __zero_reg__
+ 604               	.LVL61:
+ 605 010a 00C0      		rjmp .L19
+ 606               	.LVL62:
+ 607               	.L26:
+  75:tmk_core/protocol/midi/sysex_tools.c **** 
+ 608               		.loc 1 75 0
+ 609 010c 80E0      		ldi r24,0
+ 610 010e 90E0      		ldi r25,0
+ 611               	.LVL63:
+ 612               	.L19:
+ 613               	/* epilogue start */
+  97:tmk_core/protocol/midi/sysex_tools.c ****    }
+  98:tmk_core/protocol/midi/sysex_tools.c **** }
+ 614               		.loc 1 98 0
+ 615 0110 DF91      		pop r29
+ 616 0112 CF91      		pop r28
+ 617 0114 1F91      		pop r17
+ 618 0116 0F91      		pop r16
+ 619 0118 FF90      		pop r15
+ 620 011a EF90      		pop r14
+ 621 011c DF90      		pop r13
+ 622 011e CF90      		pop r12
+ 623 0120 BF90      		pop r11
+ 624 0122 AF90      		pop r10
+ 625               	.LVL64:
+ 626 0124 9F90      		pop r9
+ 627 0126 7F90      		pop r7
+ 628 0128 6F90      		pop r6
+ 629 012a 0895      		ret
+ 630               		.cfi_endproc
+ 631               	.LFE3:
+ 633               		.text
+ 634               	.Letext0:
+ 635               		.file 2 "c:\\msys64_2\\home\\egypt2\\qmk_utils\\avr8-gnu-toolchain\\avr\\include\\stdint.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 sysex_tools.c
+C:\msys64_2\tmp\cc1hOyMN.s:2      *ABS*:0000003e __SP_H__
+C:\msys64_2\tmp\cc1hOyMN.s:3      *ABS*:0000003d __SP_L__
+C:\msys64_2\tmp\cc1hOyMN.s:4      *ABS*:0000003f __SREG__
+C:\msys64_2\tmp\cc1hOyMN.s:5      *ABS*:00000000 __tmp_reg__
+C:\msys64_2\tmp\cc1hOyMN.s:6      *ABS*:00000001 __zero_reg__
+C:\msys64_2\tmp\cc1hOyMN.s:13     .text.sysex_encoded_length:00000000 sysex_encoded_length
+C:\msys64_2\tmp\cc1hOyMN.s:57     .text.sysex_decoded_length:00000000 sysex_decoded_length
+C:\msys64_2\tmp\cc1hOyMN.s:109    .text.sysex_encode:00000000 sysex_encode
+C:\msys64_2\tmp\cc1hOyMN.s:369    .text.sysex_decode:00000000 sysex_decode
+
+UNDEFINED SYMBOLS
+__udivmodhi4
