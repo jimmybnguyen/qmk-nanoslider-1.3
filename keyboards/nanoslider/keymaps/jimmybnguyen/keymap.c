@@ -7,7 +7,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	| B1 B2 B3 2x1 |
 	*/ 
 
-    // A3, B1, B2, B3
+	// A3, B1, B2, B3
 	// A2, X0, A1, 2x1
 	KEYMAP(
 		KC_VOLU, KC_MPRV, KC_MSTP, KC_VOLD,
